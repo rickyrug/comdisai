@@ -1,6 +1,13 @@
 # Release Notes
 
-## Unreleased — Customer Dictionary and Audit Fields
+## Unreleased — UOM Dictionary
+
+### Added
+- UOM dictionary MVC screen with list, create, edit, and logical delete.
+- Required UOM name (maximum 255 characters), trimmed on write and unique without regard to case. A deleted UOM's name remains reserved.
+- UOM audit metadata and migration, reusing the shared audit/save pipeline.
+
+## Earlier — Customer Dictionary and Audit Fields
 
 ### Added
 - Customer dictionary MVC screen with list, create, edit, and logical delete.
