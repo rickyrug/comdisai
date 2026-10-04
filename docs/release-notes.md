@@ -1,6 +1,16 @@
 # Release Notes
 
-## Unreleased — Repository & Unit of Work
+## Unreleased — Customer Dictionary and Audit Fields
+
+### Added
+- Customer dictionary MVC screen with list, create, edit, and logical delete.
+- Customer fields from `docs/CustomerDictionary/spec.md`: required name, address, and RFC with the specified length limits.
+- Shared `CreatedAtUtc`, `CreatedBy`, `UpdatedAtUtc`, and `UpdatedBy` fields on Customer, Product, and Order.
+- Automatic audit stamping in `AppDbContext`, using the authenticated `NameIdentifier` claim or `system` when unavailable.
+- Customer deletion metadata (`IsDeleted`, `DeletedAtUtc`, `DeletedBy`) and a global query filter that hides logically deleted customers.
+- `CustomerDictionaryAndAudit` EF Core migration, including a legacy-data backfill for existing products and orders.
+
+## Earlier — Repository & Unit of Work
 
 ### Added
 - `IGenericRepository<T>` / `GenericRepository<T>` (`Repositories/`): `GetByIdAsync`, `GetAllAsync`, `AddAsync`, `Update`, `Delete`. Async methods accept a `CancellationToken`.
@@ -13,5 +23,5 @@
 - `Program.cs` registers `AppDbContext` (SQLite), the open-generic `IGenericRepository<>`, and `IUnitOfWork` as scoped services.
 
 ### Notes
-- No EF Core migrations exist yet; run `dotnet ef migrations add Initial` and `dotnet ef database update` before using the database.
+- Apply migrations with `dotnet ef database update` before using the database.
 - `OrdersController.Index` has no view yet.

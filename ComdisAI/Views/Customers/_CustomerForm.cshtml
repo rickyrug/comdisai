@@ -1,0 +1,17 @@
+@model Customer
+
+<div class="mb-3">
+    <label asp-for="Name" class="form-label"></label>
+    <input asp-for="Name" class="form-control" maxlength="255" />
+    <span asp-validation-for="Name" class="text-danger"></span>
+</div>
+<div class="mb-3">
+    <label asp-for="Address" class="form-label"></label>
+    <input asp-for="Address" class="form-control" maxlength="255" />
+    <span asp-validation-for="Address" class="text-danger"></span>
+</div>
+<div class="mb-3">
+    <label asp-for="RFC" class="form-label"></label>
+    <input asp-for="RFC" class="form-control" maxlength="25" />
+    <span asp-validation-for="RFC" class="text-danger"></span>
+</div>

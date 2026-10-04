@@ -1,6 +1,6 @@
 namespace ComdisAI.Models;
 
-public class Product
+public class Product : AuditableEntity
 {
     public int Id { get; set; }
     public required string Name { get; set; }
