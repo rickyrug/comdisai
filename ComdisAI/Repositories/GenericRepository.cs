@@ -1,5 +1,6 @@
 using ComdisAI.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace ComdisAI.Repositories;
 
@@ -12,6 +13,16 @@ public class GenericRepository<T>(AppDbContext context) : IGenericRepository<T> 
 
     public async Task<IReadOnlyList<T>> GetAllAsync(CancellationToken cancellationToken = default) =>
         await _set.AsNoTracking().ToListAsync(cancellationToken);
+
+    public async Task<T?> GetFirstOrDefaultAsync(
+        Expression<Func<T, bool>> predicate,
+        CancellationToken cancellationToken = default) =>
+        await _set.FirstOrDefaultAsync(predicate, cancellationToken);
+
+    public async Task<T?> GetFirstOrDefaultIncludingDeletedAsync(
+        Expression<Func<T, bool>> predicate,
+        CancellationToken cancellationToken = default) =>
+        await _set.IgnoreQueryFilters().FirstOrDefaultAsync(predicate, cancellationToken);
 
     public async Task AddAsync(T entity, CancellationToken cancellationToken = default) =>
         await _set.AddAsync(entity, cancellationToken);

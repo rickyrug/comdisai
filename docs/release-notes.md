@@ -1,5 +1,17 @@
 # Release Notes
 
+## Unreleased — Authentication Layer
+
+### Added
+- Database-backed user dictionary with create, edit, list, logical delete, and manual password reset.
+- Cookie-based sign-in and sign-out, with hashed passwords and a UTC last-login timestamp.
+- Case-insensitive unique email addresses, shared audit metadata, and logical-delete query filtering.
+- `AuthenticationLayer` EF Core migration (not applied automatically).
+
+### Notes
+- Authentication does not yet restrict access to application or user-management routes; authorization is deferred to a later layer.
+- Apply migrations with `dotnet ef database update` before using the user dictionary.
+
 ## Unreleased — Bank Dictionary
 
 ### Added
