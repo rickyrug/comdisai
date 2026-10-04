@@ -1,5 +1,12 @@
 # Release Notes
 
+## Unreleased — Bank Dictionary
+
+### Added
+- Bank dictionary MVC screen with list, create, edit, and logical delete.
+- Required Bank name (maximum 255 characters), trimmed on write and unique without regard to case. A deleted Bank's name remains reserved.
+- Bank audit metadata and EF Core migration, reusing the shared audit/save pipeline.
+
 ## Unreleased — UOM Dictionary
 
 ### Added
