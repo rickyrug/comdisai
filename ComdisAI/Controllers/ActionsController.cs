@@ -20,20 +20,20 @@ public class ActionsController(IUnitOfWork unitOfWork, AppDbContext dbContext) :
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(
-        [Bind("Code,Description")] Actions action,
+        [Bind("Code,Description")] Actions input,
         CancellationToken cancellationToken)
     {
-        NormalizeAndValidate(action);
+        NormalizeAndValidate(input);
         if (!ModelState.IsValid)
-            return View(action);
+            return View(input);
 
-        if (await CodeIsReservedAsync(action.Code, null, cancellationToken))
+        if (await CodeIsReservedAsync(input.Code, null, cancellationToken))
         {
             ModelState.AddModelError(nameof(Actions.Code), "An action with this code already exists.");
-            return View(action);
+            return View(input);
         }
 
-        await unitOfWork.Repository<Actions>().AddAsync(action, cancellationToken);
+        await unitOfWork.Repository<Actions>().AddAsync(input, cancellationToken);
         try
         {
             await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -41,7 +41,7 @@ public class ActionsController(IUnitOfWork unitOfWork, AppDbContext dbContext) :
         catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
         {
             ModelState.AddModelError(nameof(Actions.Code), "An action with this code already exists.");
-            return View(action);
+            return View(input);
         }
 
         return RedirectToAction(nameof(Index));
