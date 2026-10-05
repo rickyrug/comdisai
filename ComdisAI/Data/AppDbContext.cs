@@ -192,7 +192,8 @@ public class AppDbContext(
                     deletedUser.DeletedBy = actor;
                 }
             }
-            else if (entry.State == EntityState.Deleted && entry.Entity is Customer or Uom or Bank or AuditableEntity or User)
+            else if (entry.State == EntityState.Deleted &&
+                     entry.Entity is Customer or Uom or Bank or ComdisAI.Models.Actions or Role or User)
             {
                 var entity = entry.Entity;
                 switch (entity)

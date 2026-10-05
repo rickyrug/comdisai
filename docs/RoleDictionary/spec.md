@@ -36,6 +36,13 @@ stored and are shown as deleted so they can be removed.
 | Id | int | false | Primary key, auto-increment |
 | idRole | int | false | Foreign key to `Role.Id` |
 | idAction | int | false | Foreign key to `Action.Id` |
+| CreatedAtUtc | datetime | false | UTC time the permission was assigned |
+| CreatedBy | string | false | Actor identifier; `system` if unauthenticated |
+| UpdatedAtUtc | datetime | false | UTC audit timestamp |
+| UpdatedBy | string | false | Actor identifier; `system` if unauthenticated |
 
 Each role/action pair is unique. An action may be assigned to multiple roles;
-one role may have multiple actions.
+one role may have multiple actions. Removing an assignment physically deletes
+its row. Existing assignments receive `unknown` actor values and the migration
+time as their audit timestamps because their original grant details are not
+available.

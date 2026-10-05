@@ -1,6 +1,6 @@
 namespace ComdisAI.Models;
 
-public class RoleAction
+public class RoleAction : AuditableEntity
 {
     public int Id { get; set; }
     public int RoleId { get; set; }
