@@ -1,0 +1,13 @@
+@model Actions
+
+@{
+    ViewData["Title"] = "Edit Action";
+}
+
+<h1>Edit Action</h1>
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <partial name="_ActionForm" model="Model" />
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+</form>

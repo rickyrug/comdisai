@@ -1,5 +1,12 @@
 # Release Notes
 
+## Unreleased — Actions Dictionary
+
+### Added
+- Actions dictionary MVC screen with list, create, edit, and logical delete.
+- Required action code (maximum 50 characters) and description (maximum 255 characters); codes are trimmed and unique without regard to case, and remain reserved after logical deletion.
+- Action audit metadata, query filtering for deleted actions, and an EF Core migration (not applied automatically).
+
 ## Unreleased — Authentication Layer
 
 ### Added

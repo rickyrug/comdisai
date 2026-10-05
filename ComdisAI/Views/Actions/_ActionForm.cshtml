@@ -1,0 +1,12 @@
+@model Actions
+
+<div class="mb-3">
+    <label asp-for="Code" class="form-label"></label>
+    <input asp-for="Code" class="form-control" maxlength="50" />
+    <span asp-validation-for="Code" class="text-danger"></span>
+</div>
+<div class="mb-3">
+    <label asp-for="Description" class="form-label"></label>
+    <input asp-for="Description" class="form-control" maxlength="255" />
+    <span asp-validation-for="Description" class="text-danger"></span>
+</div>
