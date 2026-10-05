@@ -1,0 +1,13 @@
+@model Role
+
+@{
+    ViewData["Title"] = "Add Role";
+}
+
+<h1>Add Role</h1>
+<form asp-action="Create" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <partial name="_RoleForm" model="Model" />
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+</form>
