@@ -1,5 +1,6 @@
 using ComdisAI.Models;
 using Microsoft.EntityFrameworkCore;
+using SQLitePCL;
 using System.Security.Claims;
 
 namespace ComdisAI.Data;
@@ -13,6 +14,7 @@ public class AppDbContext(
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Uom> Uoms => Set<Uom>();
     public DbSet<Bank> Banks => Set<Bank>();
+    public DbSet<Actions> Actions => Set<Actions>();
     public DbSet<User> Users => Set<User>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -42,6 +44,23 @@ public class AppDbContext(
                 .IsUnique()
                 .HasDatabaseName("IX_Banks_NormalizedName");
             entity.HasQueryFilter(bank => !bank.IsDeleted);
+        });
+        modelBuilder.Entity<Actions>(entity =>
+        {
+            entity.ToTable("Action");
+            entity.HasKey(action => action.Id)
+                .HasName("PK_Actions");
+            entity.Property(action => action.Code)
+                .HasMaxLength(50);
+            entity.Property(action => action.Description)
+                .HasMaxLength(255);
+            entity.Property<string>("NormalizedCode")
+                .HasMaxLength(50)
+                .IsRequired();
+            entity.HasIndex("NormalizedCode")
+                .IsUnique()
+                .HasDatabaseName("IX_Action_NormalizedCode");
+            entity.HasQueryFilter(action => !action.IsDeleted);
         });
         modelBuilder.Entity<User>(entity =>
         {
@@ -120,13 +139,18 @@ public class AppDbContext(
                     bank.DeletedAtUtc = now;
                     bank.DeletedBy = actor;
                 }
+                else if (entry.Entity is Actions { IsDeleted: true, DeletedAtUtc: null } action)
+                {
+                    action.DeletedAtUtc = now;
+                    action.DeletedBy = actor;
+                }
                 else if (entry.Entity is User { IsDeleted: true, DeletedAtUtc: null } deletedUser)
                 {
                     deletedUser.DeletedAtUtc = now;
                     deletedUser.DeletedBy = actor;
                 }
             }
-            else if (entry.State == EntityState.Deleted && entry.Entity is Customer or Uom or Bank or User)
+            else if (entry.State == EntityState.Deleted && entry.Entity is Customer or Uom or Bank or AuditableEntity or User )
             {
                 var entity = entry.Entity;
                 switch (entity)
@@ -145,6 +169,11 @@ public class AppDbContext(
                         bank.IsDeleted = true;
                         bank.DeletedAtUtc = now;
                         bank.DeletedBy = actor;
+                        break;
+                    case Actions action:
+                        action.IsDeleted = true;
+                        action.DeletedAtUtc = now;
+                        action.DeletedBy = actor;
                         break;
                     case User deletedUser:
                         deletedUser.IsDeleted = true;
@@ -168,6 +197,8 @@ public class AppDbContext(
             Entry(uom).Property<string>("NormalizedName").CurrentValue = uom.Name.Trim().ToUpperInvariant();
         else if (entity is Bank bank)
             Entry(bank).Property<string>("NormalizedName").CurrentValue = bank.Name.Trim().ToUpperInvariant();
+        else if (entity is Actions action)
+            Entry(action).Property<string>("NormalizedCode").CurrentValue = action.Code.Trim().ToUpperInvariant();
         else if (entity is User user)
             Entry(user).Property<string>("NormalizedEmail").CurrentValue = User.NormalizeEmail(user.Email);
     }
