@@ -10,19 +10,29 @@
 </div>
 
 <form asp-action="ManageRoles" method="get" class="mb-4">
+    <label for="user-search" class="form-label">Find a user</label>
+    <input id="user-search"
+           type="search"
+           class="form-control mb-2"
+           placeholder="Search by name, surname, or email"
+           autocomplete="off"
+           data-user-search />
     <label for="user-id" class="form-label">User</label>
     <div class="d-flex gap-2">
-        <select id="user-id" name="id" class="form-select" required>
+        <select id="user-id" name="id" class="form-select" required data-user-select>
             <option value="">Select a user</option>
             @foreach (var user in Model.Users)
             {
-                <option value="@user.Id" selected="@(Model.UserId == user.Id)">
+                <option value="@user.Id"
+                        selected="@(Model.UserId == user.Id)"
+                        data-search-text="@($"{user.Name} {user.Surname} {user.Email}")">
                     @user.Name @user.Surname (@user.Email)
                 </option>
             }
         </select>
         <button type="submit" class="btn btn-outline-primary">Select user</button>
     </div>
+    <p class="form-text" data-user-search-empty hidden>No users match your search.</p>
 </form>
 
 @if (Model.UserId is null)
