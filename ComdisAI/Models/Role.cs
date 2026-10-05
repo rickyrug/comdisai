@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ComdisAI.Models;
 
-public class Actions : AuditableEntity
+public class Role : AuditableEntity
 {
     public int Id { get; set; }
 

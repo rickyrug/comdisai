@@ -15,6 +15,8 @@ public class AppDbContext(
     public DbSet<Uom> Uoms => Set<Uom>();
     public DbSet<Bank> Banks => Set<Bank>();
     public DbSet<Actions> Actions => Set<Actions>();
+    public DbSet<Role> Roles => Set<Role>();
+    public DbSet<RoleAction> RoleActions => Set<RoleAction>();
     public DbSet<User> Users => Set<User>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -61,6 +63,41 @@ public class AppDbContext(
                 .IsUnique()
                 .HasDatabaseName("IX_Action_NormalizedCode");
             entity.HasQueryFilter(action => !action.IsDeleted);
+        });
+        modelBuilder.Entity<Role>(entity =>
+        {
+            entity.ToTable("Role");
+            entity.Property(role => role.Code)
+                .HasMaxLength(50);
+            entity.Property(role => role.Description)
+                .HasMaxLength(255);
+            entity.Property<string>("NormalizedCode")
+                .HasMaxLength(50)
+                .IsRequired();
+            entity.HasIndex("NormalizedCode")
+                .IsUnique()
+                .HasDatabaseName("IX_Role_NormalizedCode");
+            entity.HasQueryFilter(role => !role.IsDeleted);
+        });
+        modelBuilder.Entity<RoleAction>(entity =>
+        {
+            entity.ToTable("RoleActions");
+            entity.Property(roleAction => roleAction.RoleId)
+                .HasColumnName("idRole");
+            entity.Property(roleAction => roleAction.ActionId)
+                .HasColumnName("idAction");
+            entity.HasIndex(roleAction => new { roleAction.RoleId, roleAction.ActionId })
+                .IsUnique()
+                .HasDatabaseName("IX_RoleActions_idRole_idAction");
+            entity.HasQueryFilter(roleAction => !roleAction.Role.IsDeleted && !roleAction.Action.IsDeleted);
+            entity.HasOne(roleAction => roleAction.Role)
+                .WithMany(role => role.RoleActions)
+                .HasForeignKey(roleAction => roleAction.RoleId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(roleAction => roleAction.Action)
+                .WithMany(action => action.RoleActions)
+                .HasForeignKey(roleAction => roleAction.ActionId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
         modelBuilder.Entity<User>(entity =>
         {
@@ -144,13 +181,19 @@ public class AppDbContext(
                     action.DeletedAtUtc = now;
                     action.DeletedBy = actor;
                 }
+                else if (entry.Entity is Role { IsDeleted: true, DeletedAtUtc: null } role)
+                {
+                    role.DeletedAtUtc = now;
+                    role.DeletedBy = actor;
+                }
                 else if (entry.Entity is User { IsDeleted: true, DeletedAtUtc: null } deletedUser)
                 {
                     deletedUser.DeletedAtUtc = now;
                     deletedUser.DeletedBy = actor;
                 }
             }
-            else if (entry.State == EntityState.Deleted && entry.Entity is Customer or Uom or Bank or AuditableEntity or User )
+            else if (entry.State == EntityState.Deleted &&
+                     entry.Entity is Customer or Uom or Bank or ComdisAI.Models.Actions or Role or User)
             {
                 var entity = entry.Entity;
                 switch (entity)
@@ -174,6 +217,11 @@ public class AppDbContext(
                         action.IsDeleted = true;
                         action.DeletedAtUtc = now;
                         action.DeletedBy = actor;
+                        break;
+                    case Role role:
+                        role.IsDeleted = true;
+                        role.DeletedAtUtc = now;
+                        role.DeletedBy = actor;
                         break;
                     case User deletedUser:
                         deletedUser.IsDeleted = true;
@@ -199,6 +247,8 @@ public class AppDbContext(
             Entry(bank).Property<string>("NormalizedName").CurrentValue = bank.Name.Trim().ToUpperInvariant();
         else if (entity is Actions action)
             Entry(action).Property<string>("NormalizedCode").CurrentValue = action.Code.Trim().ToUpperInvariant();
+        else if (entity is Role role)
+            Entry(role).Property<string>("NormalizedCode").CurrentValue = role.Code.Trim().ToUpperInvariant();
         else if (entity is User user)
             Entry(user).Property<string>("NormalizedEmail").CurrentValue = User.NormalizeEmail(user.Email);
     }
