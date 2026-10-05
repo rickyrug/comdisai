@@ -27,6 +27,7 @@ public class User : AuditableEntity
     public bool IsDeleted { get; set; }
     public DateTime? DeletedAtUtc { get; set; }
     public string? DeletedBy { get; set; }
+    public ICollection<UserRole> UserRoles { get; set; } = [];
 
     public static string NormalizeEmail(string email) => email.Trim().ToUpperInvariant();
 }

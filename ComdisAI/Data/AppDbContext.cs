@@ -18,6 +18,7 @@ public class AppDbContext(
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<RoleAction> RoleActions => Set<RoleAction>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<UserRole> UserRoles => Set<UserRole>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -97,6 +98,26 @@ public class AppDbContext(
             entity.HasOne(roleAction => roleAction.Action)
                 .WithMany(action => action.RoleActions)
                 .HasForeignKey(roleAction => roleAction.ActionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<UserRole>(entity =>
+        {
+            entity.ToTable("UserRoles");
+            entity.Property(userRole => userRole.RoleId)
+                .HasColumnName("idRole");
+            entity.Property(userRole => userRole.UserId)
+                .HasColumnName("idUser");
+            entity.HasIndex(userRole => new { userRole.UserId, userRole.RoleId })
+                .IsUnique()
+                .HasDatabaseName("IX_UserRoles_idUser_idRole");
+            entity.HasQueryFilter(userRole => !userRole.User.IsDeleted && !userRole.Role.IsDeleted);
+            entity.HasOne(userRole => userRole.User)
+                .WithMany(user => user.UserRoles)
+                .HasForeignKey(userRole => userRole.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(userRole => userRole.Role)
+                .WithMany(role => role.UserRoles)
+                .HasForeignKey(userRole => userRole.RoleId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
         modelBuilder.Entity<User>(entity =>

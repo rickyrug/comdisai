@@ -1,0 +1,64 @@
+@model ComdisAI.ViewModels.Users.ManageUserRolesViewModel
+
+@{
+    ViewData["Title"] = "Manage User Roles";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Manage user roles</h1>
+    <a asp-action="Index" class="btn btn-secondary">Back to Users</a>
+</div>
+
+<form asp-action="ManageRoles" method="get" class="mb-4">
+    <label for="user-id" class="form-label">User</label>
+    <div class="d-flex gap-2">
+        <select id="user-id" name="id" class="form-select" required>
+            <option value="">Select a user</option>
+            @foreach (var user in Model.Users)
+            {
+                <option value="@user.Id" selected="@(Model.UserId == user.Id)">
+                    @user.Name @user.Surname (@user.Email)
+                </option>
+            }
+        </select>
+        <button type="submit" class="btn btn-outline-primary">Select user</button>
+    </div>
+</form>
+
+@if (Model.UserId is null)
+{
+    <p>No available users were found.</p>
+}
+else
+{
+    <form asp-action="ManageRoles" method="post">
+        <input asp-for="UserId" type="hidden" />
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        @if (Model.Roles.Count == 0)
+        {
+            <p>No available roles were found.</p>
+        }
+        else
+        {
+            <fieldset class="mb-3">
+                <legend class="fs-5">Roles</legend>
+                @foreach (var role in Model.Roles)
+                {
+                    <div class="form-check">
+                        <input id="role-@role.Id"
+                               name="SelectedRoleIds"
+                               type="checkbox"
+                               value="@role.Id"
+                               class="form-check-input"
+                               checked="@Model.SelectedRoleIds.Contains(role.Id)" />
+                        <label for="role-@role.Id" class="form-check-label">
+                            <strong>@role.Code</strong> - @role.Description
+                        </label>
+                    </div>
+                }
+            </fieldset>
+        }
+        <span asp-validation-for="SelectedRoleIds" class="text-danger"></span>
+        <button type="submit" class="btn btn-primary">Save role assignments</button>
+    </form>
+}
