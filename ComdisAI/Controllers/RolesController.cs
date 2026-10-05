@@ -121,7 +121,7 @@ public class RolesController(IUnitOfWork unitOfWork, AppDbContext dbContext) : C
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddAction(
+    public async Task<IActionResult> AddActions(
         int id,
         ManageRoleActionsViewModel input,
         CancellationToken cancellationToken)
@@ -133,25 +133,64 @@ public class RolesController(IUnitOfWork unitOfWork, AppDbContext dbContext) : C
         if (role is null)
             return NotFound();
 
+        var selectedActionIds = input.SelectedActionIds.Distinct().ToArray();
+        if (input.SelectedActionIds.Count == 0)
+        {
+            ModelState.AddModelError(nameof(input.SelectedActionIds), "Select at least one action.");
+            return View(nameof(ManageActions), await BuildManageActionsViewModelAsync(
+                id,
+                cancellationToken,
+                input.SelectedActionIds));
+        }
+
+        if (selectedActionIds.Length != input.SelectedActionIds.Count)
+        {
+            ModelState.AddModelError(nameof(input.SelectedActionIds), "An action was selected more than once.");
+            return View(nameof(ManageActions), await BuildManageActionsViewModelAsync(
+                id,
+                cancellationToken,
+                input.SelectedActionIds));
+        }
+
         if (!ModelState.IsValid)
-            return View(nameof(ManageActions), await BuildManageActionsViewModelAsync(id, cancellationToken));
+            return View(nameof(ManageActions), await BuildManageActionsViewModelAsync(
+                id,
+                cancellationToken,
+                input.SelectedActionIds));
 
-        if (!await dbContext.Actions.AnyAsync(action => action.Id == input.ActionId, cancellationToken))
+        var availableActionIds = await dbContext.Actions
+            .Where(action => selectedActionIds.Contains(action.Id))
+            .Select(action => action.Id)
+            .ToListAsync(cancellationToken);
+        if (availableActionIds.Count != selectedActionIds.Length)
         {
-            ModelState.AddModelError(nameof(input.ActionId), "Select an available action.");
-            return View(nameof(ManageActions), await BuildManageActionsViewModelAsync(id, cancellationToken));
+            ModelState.AddModelError(
+                nameof(input.SelectedActionIds),
+                "One or more selected actions are no longer available.");
+            return View(nameof(ManageActions), await BuildManageActionsViewModelAsync(
+                id,
+                cancellationToken,
+                input.SelectedActionIds));
         }
 
-        if (await dbContext.RoleActions.AnyAsync(
-                roleAction => roleAction.RoleId == id && roleAction.ActionId == input.ActionId,
-                cancellationToken))
+        var alreadyAssignedActionIds = await dbContext.RoleActions
+            .IgnoreQueryFilters()
+            .Where(roleAction => roleAction.RoleId == id && selectedActionIds.Contains(roleAction.ActionId))
+            .Select(roleAction => roleAction.ActionId)
+            .ToListAsync(cancellationToken);
+        if (alreadyAssignedActionIds.Count > 0)
         {
-            ModelState.AddModelError(nameof(input.ActionId), "This action is already assigned to the role.");
-            return View(nameof(ManageActions), await BuildManageActionsViewModelAsync(id, cancellationToken));
+            ModelState.AddModelError(
+                nameof(input.SelectedActionIds),
+                "One or more selected actions are already assigned to the role.");
+            return View(nameof(ManageActions), await BuildManageActionsViewModelAsync(
+                id,
+                cancellationToken,
+                input.SelectedActionIds));
         }
 
-        await dbContext.RoleActions.AddAsync(
-            new RoleAction { RoleId = id, ActionId = input.ActionId },
+        await dbContext.RoleActions.AddRangeAsync(
+            selectedActionIds.Select(actionId => new RoleAction { RoleId = id, ActionId = actionId }),
             cancellationToken);
         try
         {
@@ -159,8 +198,13 @@ public class RolesController(IUnitOfWork unitOfWork, AppDbContext dbContext) : C
         }
         catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
         {
-            ModelState.AddModelError(nameof(input.ActionId), "This action is already assigned to the role.");
-            return View(nameof(ManageActions), await BuildManageActionsViewModelAsync(id, cancellationToken));
+            ModelState.AddModelError(
+                nameof(input.SelectedActionIds),
+                "One or more selected actions were assigned to the role by another request.");
+            return View(nameof(ManageActions), await BuildManageActionsViewModelAsync(
+                id,
+                cancellationToken,
+                input.SelectedActionIds));
         }
 
         return RedirectToAction(nameof(ManageActions), new { id });
@@ -191,7 +235,8 @@ public class RolesController(IUnitOfWork unitOfWork, AppDbContext dbContext) : C
 
     private async Task<ManageRoleActionsViewModel> BuildManageActionsViewModelAsync(
         int roleId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IEnumerable<int>? selectedActionIds = null)
     {
         var role = await unitOfWork.Repository<Role>().GetByIdAsync(roleId, cancellationToken)
             ?? throw new InvalidOperationException($"Role {roleId} was not found.");
@@ -216,10 +261,11 @@ public class RolesController(IUnitOfWork unitOfWork, AppDbContext dbContext) : C
         var availableActions = await dbContext.Actions
             .Where(action => !assignedActionIds.Contains(action.Id))
             .OrderBy(action => action.Code)
-            .Select(action => new SelectListItem
+            .Select(action => new RoleActionOptionViewModel
             {
-                Value = action.Id.ToString(),
-                Text = $"{action.Code} - {action.Description}"
+                Id = action.Id,
+                Code = action.Code,
+                Description = action.Description
             })
             .ToListAsync(cancellationToken);
 
@@ -227,6 +273,7 @@ public class RolesController(IUnitOfWork unitOfWork, AppDbContext dbContext) : C
         {
             RoleId = role.Id,
             RoleCode = role.Code,
+            SelectedActionIds = selectedActionIds?.ToList() ?? [],
             AssignedActions = assignments,
             AvailableActions = availableActions
         };
