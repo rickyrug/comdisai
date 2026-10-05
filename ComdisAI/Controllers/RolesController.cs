@@ -233,10 +233,74 @@ public class RolesController(IUnitOfWork unitOfWork, AppDbContext dbContext) : C
         return RedirectToAction(nameof(ManageActions), new { id });
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveActions(
+        int id,
+        ManageRoleActionsViewModel input,
+        CancellationToken cancellationToken)
+    {
+        if (id != input.RoleId)
+            return BadRequest();
+
+        if (await unitOfWork.Repository<Role>().GetByIdAsync(id, cancellationToken) is null)
+            return NotFound();
+
+        var selectedRoleActionIds = input.SelectedRoleActionIds.Distinct().ToArray();
+        if (input.SelectedRoleActionIds.Count == 0)
+        {
+            ModelState.AddModelError(
+                nameof(input.SelectedRoleActionIds),
+                "Select at least one assigned action to remove.");
+            return View(nameof(ManageActions), await BuildManageActionsViewModelAsync(
+                id,
+                cancellationToken,
+                selectedRoleActionIds: input.SelectedRoleActionIds));
+        }
+
+        if (selectedRoleActionIds.Length != input.SelectedRoleActionIds.Count)
+        {
+            ModelState.AddModelError(
+                nameof(input.SelectedRoleActionIds),
+                "An assigned action was selected more than once.");
+            return View(nameof(ManageActions), await BuildManageActionsViewModelAsync(
+                id,
+                cancellationToken,
+                selectedRoleActionIds: input.SelectedRoleActionIds));
+        }
+
+        if (!ModelState.IsValid)
+            return View(nameof(ManageActions), await BuildManageActionsViewModelAsync(
+                id,
+                cancellationToken,
+                selectedRoleActionIds: input.SelectedRoleActionIds));
+
+        var assignments = await dbContext.RoleActions
+            .IgnoreQueryFilters()
+            .Where(roleAction =>
+                roleAction.RoleId == id && selectedRoleActionIds.Contains(roleAction.Id))
+            .ToListAsync(cancellationToken);
+        if (assignments.Count != selectedRoleActionIds.Length)
+        {
+            ModelState.AddModelError(
+                nameof(input.SelectedRoleActionIds),
+                "One or more selected assignments are no longer available.");
+            return View(nameof(ManageActions), await BuildManageActionsViewModelAsync(
+                id,
+                cancellationToken,
+                selectedRoleActionIds: input.SelectedRoleActionIds));
+        }
+
+        dbContext.RoleActions.RemoveRange(assignments);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return RedirectToAction(nameof(ManageActions), new { id });
+    }
+
     private async Task<ManageRoleActionsViewModel> BuildManageActionsViewModelAsync(
         int roleId,
         CancellationToken cancellationToken,
-        IEnumerable<int>? selectedActionIds = null)
+        IEnumerable<int>? selectedActionIds = null,
+        IEnumerable<int>? selectedRoleActionIds = null)
     {
         var role = await unitOfWork.Repository<Role>().GetByIdAsync(roleId, cancellationToken)
             ?? throw new InvalidOperationException($"Role {roleId} was not found.");
@@ -274,6 +338,7 @@ public class RolesController(IUnitOfWork unitOfWork, AppDbContext dbContext) : C
             RoleId = role.Id,
             RoleCode = role.Code,
             SelectedActionIds = selectedActionIds?.ToList() ?? [],
+            SelectedRoleActionIds = selectedRoleActionIds?.ToList() ?? [],
             AssignedActions = assignments,
             AvailableActions = availableActions
         };

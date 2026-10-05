@@ -69,29 +69,64 @@
 }
 else
 {
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Code</th>
-                <th>Description</th>
-                <th>Status</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var action in Model.AssignedActions)
-            {
-                <tr>
-                    <td>@action.Code</td>
-                    <td>@action.Description</td>
-                    <td>@(action.IsDeleted ? "Deleted" : "Active")</td>
-                    <td class="text-end">
-                        <form asp-action="RemoveAction" asp-route-id="@Model.RoleId" asp-route-roleActionId="@action.RoleActionId" method="post">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
-                        </form>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <form asp-action="RemoveActions"
+          asp-route-id="@Model.RoleId"
+          method="post"
+          data-role-action-assignment>
+        <input asp-for="RoleId" type="hidden" />
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <div class="mb-3">
+            <label for="assigned-action-search" class="form-label">Find assigned actions</label>
+            <input id="assigned-action-search"
+                   type="search"
+                   class="form-control"
+                   placeholder="Search by code or description"
+                   autocomplete="off"
+                   data-role-action-search />
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span>@Model.AssignedActions.Count actions assigned</span>
+            <div class="form-check">
+                <input id="select-visible-assigned-actions"
+                       type="checkbox"
+                       class="form-check-input"
+                       data-select-visible-actions />
+                <label for="select-visible-assigned-actions" class="form-check-label">Select all visible</label>
+            </div>
+        </div>
+        <div class="overflow-auto border rounded mb-3" style="max-height: 24rem;">
+            <table class="table table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col"><span class="visually-hidden">Select</span></th>
+                        <th scope="col">Code</th>
+                        <th scope="col">Description</th>
+                        <th scope="col">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var action in Model.AssignedActions)
+                    {
+                        <tr data-role-action-option data-search-text="@($"{action.Code} {action.Description}")">
+                            <td>
+                                <input id="assignment-@action.RoleActionId"
+                                       name="SelectedRoleActionIds"
+                                       type="checkbox"
+                                       value="@action.RoleActionId"
+                                       class="form-check-input"
+                                       checked="@Model.SelectedRoleActionIds.Contains(action.RoleActionId)"
+                                       aria-label="Select @action.Code"
+                                       data-role-action-checkbox />
+                            </td>
+                            <td>@action.Code</td>
+                            <td>@action.Description</td>
+                            <td>@(action.IsDeleted ? "Deleted" : "Active")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <span asp-validation-for="SelectedRoleActionIds" class="text-danger"></span>
+        <button type="submit" class="btn btn-danger">Remove Selected Actions</button>
+    </form>
 }
