@@ -1,4 +1,5 @@
 using ComdisAI.Data;
+using ComdisAI.Authorization;
 using ComdisAI.Models;
 using ComdisAI.Repositories;
 using ComdisAI.ViewModels.Users;
@@ -14,6 +15,7 @@ public class UsersController(
     IPasswordHasher<User> passwordHasher,
     AppDbContext dbContext) : Controller
 {
+    [RequireAction(AuthorizationActionCodes.ViewUser)]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         var users = await unitOfWork.Repository<User>().GetAllAsync(cancellationToken);
@@ -30,6 +32,7 @@ public class UsersController(
             .ToList());
     }
 
+    [RequireAction(AuthorizationActionCodes.AssignUserRoles)]
     public async Task<IActionResult> ManageRoles(int? id, CancellationToken cancellationToken)
     {
         var users = await unitOfWork.Repository<User>().GetAllAsync(cancellationToken);
@@ -42,6 +45,7 @@ public class UsersController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.AssignUserRoles)]
     public async Task<IActionResult> ManageRoles(
         ManageUserRolesViewModel input,
         CancellationToken cancellationToken)
@@ -114,10 +118,12 @@ public class UsersController(
         return RedirectToAction(nameof(ManageRoles), new { id = user.Id });
     }
 
+    [RequireAction(AuthorizationActionCodes.CreateUser)]
     public IActionResult Create() => View();
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.CreateUser)]
     public async Task<IActionResult> Create(
         CreateUserViewModel input,
         CancellationToken cancellationToken)
@@ -152,6 +158,7 @@ public class UsersController(
         return RedirectToAction(nameof(Index));
     }
 
+    [RequireAction(AuthorizationActionCodes.EditUser)]
     public async Task<IActionResult> Edit(int id, CancellationToken cancellationToken)
     {
         var user = await unitOfWork.Repository<User>().GetByIdAsync(id, cancellationToken);
@@ -168,6 +175,7 @@ public class UsersController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.EditUser)]
     public async Task<IActionResult> Edit(
         int id,
         EditUserViewModel input,
@@ -206,6 +214,7 @@ public class UsersController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.DeleteUser)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         var user = await unitOfWork.Repository<User>().GetByIdAsync(id, cancellationToken);
@@ -219,6 +228,7 @@ public class UsersController(
     }
 
     [HttpGet]
+    [RequireAction(AuthorizationActionCodes.ResetUserPassword)]
     public async Task<IActionResult> ResetPassword(int id, CancellationToken cancellationToken)
     {
         var user = await unitOfWork.Repository<User>().GetByIdAsync(id, cancellationToken);
@@ -229,6 +239,7 @@ public class UsersController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.ResetUserPassword)]
     public async Task<IActionResult> ResetPassword(
         int id,
         ResetUserPasswordViewModel input,

@@ -1,5 +1,18 @@
 # Release Notes
 
+## Unreleased — Authorization Layer
+
+### Added
+- Authenticated-by-default access for application routes, with action-code authorization on each protected controller endpoint.
+- Active-role selection and role switching; permissions are evaluated only from the selected, currently assigned, non-deleted role.
+- Access-denied page and navigation links filtered to the active role's grants.
+- Idempotent bootstrap of the initial administrator, role, and authorization actions using a hashed password.
+
+### Notes
+- Apply EF Core migrations before first startup. Configure `BootstrapAdmin:InitialPassword` through a secret provider (for example, the `BootstrapAdmin__InitialPassword` environment variable); optionally set `BootstrapAdmin:Email`. The initial password is only used when creating the admin account and is not reset on subsequent starts.
+- The admin bootstrap seeds missing authorization actions and assignments but fails startup if a required admin account, role, or action has been logically deleted; restore it before restarting.
+- No migration is required for this layer.
+
 ## Unreleased — Actions Dictionary
 
 ### Added
