@@ -1,4 +1,5 @@
 using ComdisAI.Data;
+using ComdisAI.Authorization;
 using ComdisAI.Models;
 using ComdisAI.Repositories;
 using Microsoft.AspNetCore.Mvc;
@@ -9,16 +10,19 @@ namespace ComdisAI.Controllers;
 
 public class BanksController(IUnitOfWork unitOfWork, AppDbContext dbContext) : Controller
 {
+    [RequireAction(AuthorizationActionCodes.ViewBank)]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         var banks = await unitOfWork.Repository<Bank>().GetAllAsync(cancellationToken);
         return View(banks.OrderBy(bank => bank.Name).ToList());
     }
 
+    [RequireAction(AuthorizationActionCodes.CreateBank)]
     public IActionResult Create() => View();
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.CreateBank)]
     public async Task<IActionResult> Create(
         [Bind("Name")] Bank bank,
         CancellationToken cancellationToken)
@@ -47,6 +51,7 @@ public class BanksController(IUnitOfWork unitOfWork, AppDbContext dbContext) : C
         return RedirectToAction(nameof(Index));
     }
 
+    [RequireAction(AuthorizationActionCodes.EditBank)]
     public async Task<IActionResult> Edit(int id, CancellationToken cancellationToken)
     {
         var bank = await unitOfWork.Repository<Bank>().GetByIdAsync(id, cancellationToken);
@@ -55,6 +60,7 @@ public class BanksController(IUnitOfWork unitOfWork, AppDbContext dbContext) : C
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.EditBank)]
     public async Task<IActionResult> Edit(
         int id,
         [Bind("Name")] Bank input,
@@ -96,6 +102,7 @@ public class BanksController(IUnitOfWork unitOfWork, AppDbContext dbContext) : C
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.DeleteBank)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         var bank = await unitOfWork.Repository<Bank>().GetByIdAsync(id, cancellationToken);

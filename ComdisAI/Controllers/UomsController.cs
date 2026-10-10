@@ -1,4 +1,5 @@
 using ComdisAI.Data;
+using ComdisAI.Authorization;
 using ComdisAI.Models;
 using ComdisAI.Repositories;
 using Microsoft.AspNetCore.Mvc;
@@ -9,16 +10,19 @@ namespace ComdisAI.Controllers;
 
 public class UomsController(IUnitOfWork unitOfWork, AppDbContext dbContext) : Controller
 {
+    [RequireAction(AuthorizationActionCodes.ViewUom)]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         var uoms = await unitOfWork.Repository<Uom>().GetAllAsync(cancellationToken);
         return View(uoms.OrderBy(uom => uom.Name).ToList());
     }
 
+    [RequireAction(AuthorizationActionCodes.CreateUom)]
     public IActionResult Create() => View();
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.CreateUom)]
     public async Task<IActionResult> Create(
         [Bind("Name")] Uom uom,
         CancellationToken cancellationToken)
@@ -47,6 +51,7 @@ public class UomsController(IUnitOfWork unitOfWork, AppDbContext dbContext) : Co
         return RedirectToAction(nameof(Index));
     }
 
+    [RequireAction(AuthorizationActionCodes.EditUom)]
     public async Task<IActionResult> Edit(int id, CancellationToken cancellationToken)
     {
         var uom = await unitOfWork.Repository<Uom>().GetByIdAsync(id, cancellationToken);
@@ -55,6 +60,7 @@ public class UomsController(IUnitOfWork unitOfWork, AppDbContext dbContext) : Co
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.EditUom)]
     public async Task<IActionResult> Edit(
         int id,
         [Bind("Name")] Uom input,
@@ -96,6 +102,7 @@ public class UomsController(IUnitOfWork unitOfWork, AppDbContext dbContext) : Co
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.DeleteUom)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         var uom = await unitOfWork.Repository<Uom>().GetByIdAsync(id, cancellationToken);

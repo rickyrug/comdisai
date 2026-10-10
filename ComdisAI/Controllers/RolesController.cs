@@ -1,4 +1,5 @@
 using ComdisAI.Data;
+using ComdisAI.Authorization;
 using ComdisAI.Models;
 using ComdisAI.Repositories;
 using ComdisAI.ViewModels.Roles;
@@ -11,16 +12,19 @@ namespace ComdisAI.Controllers;
 
 public class RolesController(IUnitOfWork unitOfWork, AppDbContext dbContext) : Controller
 {
+    [RequireAction(AuthorizationActionCodes.ViewRole)]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         var roles = await unitOfWork.Repository<Role>().GetAllAsync(cancellationToken);
         return View(roles.OrderBy(role => role.Code).ToList());
     }
 
+    [RequireAction(AuthorizationActionCodes.CreateRole)]
     public IActionResult Create() => View();
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.CreateRole)]
     public async Task<IActionResult> Create(
         [Bind("Code,Description")] Role input,
         CancellationToken cancellationToken)
@@ -49,6 +53,7 @@ public class RolesController(IUnitOfWork unitOfWork, AppDbContext dbContext) : C
         return RedirectToAction(nameof(Index));
     }
 
+    [RequireAction(AuthorizationActionCodes.EditRole)]
     public async Task<IActionResult> Edit(int id, CancellationToken cancellationToken)
     {
         var role = await unitOfWork.Repository<Role>().GetByIdAsync(id, cancellationToken);
@@ -57,6 +62,7 @@ public class RolesController(IUnitOfWork unitOfWork, AppDbContext dbContext) : C
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.EditRole)]
     public async Task<IActionResult> Edit(
         int id,
         [Bind("Code,Description")] Role input,
@@ -99,6 +105,7 @@ public class RolesController(IUnitOfWork unitOfWork, AppDbContext dbContext) : C
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.DeleteRole)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         var role = await unitOfWork.Repository<Role>().GetByIdAsync(id, cancellationToken);
@@ -111,6 +118,7 @@ public class RolesController(IUnitOfWork unitOfWork, AppDbContext dbContext) : C
         return RedirectToAction(nameof(Index));
     }
 
+    [RequireAction(AuthorizationActionCodes.ManageRoleActions)]
     public async Task<IActionResult> ManageActions(int id, CancellationToken cancellationToken)
     {
         if (await unitOfWork.Repository<Role>().GetByIdAsync(id, cancellationToken) is null)
@@ -121,6 +129,7 @@ public class RolesController(IUnitOfWork unitOfWork, AppDbContext dbContext) : C
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.ManageRoleActions)]
     public async Task<IActionResult> AddActions(
         int id,
         ManageRoleActionsViewModel input,
@@ -212,6 +221,7 @@ public class RolesController(IUnitOfWork unitOfWork, AppDbContext dbContext) : C
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.ManageRoleActions)]
     public async Task<IActionResult> RemoveAction(
         int id,
         int roleActionId,
@@ -235,6 +245,7 @@ public class RolesController(IUnitOfWork unitOfWork, AppDbContext dbContext) : C
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.ManageRoleActions)]
     public async Task<IActionResult> RemoveActions(
         int id,
         ManageRoleActionsViewModel input,

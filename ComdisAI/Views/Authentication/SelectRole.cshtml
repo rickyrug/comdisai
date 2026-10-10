@@ -1,0 +1,25 @@
+@model ComdisAI.ViewModels.Authentication.SelectRoleViewModel
+
+@{
+    ViewData["Title"] = "Select role";
+}
+
+<h1>Select a role</h1>
+<p>Choose which role you want to use for this session.</p>
+
+<form asp-action="SelectRole" method="post" class="col-md-6">
+    <input asp-for="ReturnUrl" type="hidden" />
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="mb-3">
+        <label asp-for="SelectedRoleId" class="form-label">Role</label>
+        <select asp-for="SelectedRoleId" class="form-select">
+            <option value="">Select a role</option>
+            @foreach (var role in Model.Roles)
+            {
+                <option value="@role.Id">@role.Code - @role.Description</option>
+            }
+        </select>
+        <span asp-validation-for="SelectedRoleId" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">Continue</button>
+</form>

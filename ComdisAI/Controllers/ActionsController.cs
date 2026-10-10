@@ -1,4 +1,5 @@
 using ComdisAI.Data;
+using ComdisAI.Authorization;
 using ComdisAI.Models;
 using ComdisAI.Repositories;
 using Microsoft.AspNetCore.Mvc;
@@ -9,16 +10,19 @@ namespace ComdisAI.Controllers;
 
 public class ActionsController(IUnitOfWork unitOfWork, AppDbContext dbContext) : Controller
 {
+    [RequireAction(AuthorizationActionCodes.ViewAction)]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         var actions = await unitOfWork.Repository<Actions>().GetAllAsync(cancellationToken);
         return View(actions.OrderBy(action => action.Code).ToList());
     }
 
+    [RequireAction(AuthorizationActionCodes.CreateAction)]
     public IActionResult Create() => View();
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.CreateAction)]
     public async Task<IActionResult> Create(
         [Bind("Code,Description")] Actions input,
         CancellationToken cancellationToken)
@@ -47,6 +51,7 @@ public class ActionsController(IUnitOfWork unitOfWork, AppDbContext dbContext) :
         return RedirectToAction(nameof(Index));
     }
 
+    [RequireAction(AuthorizationActionCodes.EditAction)]
     public async Task<IActionResult> Edit(int id, CancellationToken cancellationToken)
     {
         var action = await unitOfWork.Repository<Actions>().GetByIdAsync(id, cancellationToken);
@@ -55,6 +60,7 @@ public class ActionsController(IUnitOfWork unitOfWork, AppDbContext dbContext) :
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.EditAction)]
     public async Task<IActionResult> Edit(
         int id,
         [Bind("Code,Description")] Actions input,
@@ -97,6 +103,7 @@ public class ActionsController(IUnitOfWork unitOfWork, AppDbContext dbContext) :
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.DeleteAction)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         var action = await unitOfWork.Repository<Actions>().GetByIdAsync(id, cancellationToken);
