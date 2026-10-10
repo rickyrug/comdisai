@@ -75,3 +75,4 @@ _[Ss]cripts
 *.dot[Cc]over
 ComdisAI/comdisai.db
 .DS_Store
+.vscode/settings.json

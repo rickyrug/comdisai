@@ -1,4 +1,26 @@
-﻿<!DOCTYPE html>
+﻿@using System.Security.Claims
+@using ComdisAI.Models
+@using ComdisAI.Services
+@using System.Globalization
+@inject IActionPermissionService PermissionService
+@{
+    var activeRoleId = int.TryParse(
+        User.FindFirstValue(AuthorizationClaims.ActiveRoleId),
+        NumberStyles.None,
+        CultureInfo.InvariantCulture,
+        out var parsedActiveRoleId)
+        ? parsedActiveRoleId
+        : (int?)null;
+    var activeRoles = User.Identity?.IsAuthenticated == true &&
+                      int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)
+        ? await PermissionService.GetActiveRolesAsync(currentUserId)
+        : [];
+    var activeRole = activeRoles.FirstOrDefault(role => role.Id == activeRoleId);
+    var grantedActions = User.Identity?.IsAuthenticated == true
+        ? (await PermissionService.GetActiveActionCodesAsync(User)).ToHashSet(StringComparer.Ordinal)
+        : new HashSet<string>(StringComparer.Ordinal);
+}
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -13,25 +35,93 @@
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">ComdisAI</a>
+                @if (grantedActions.Contains(AuthorizationActionCodes.ViewHome))
+                {
+                    <a class="navbar-brand" asp-controller="Home" asp-action="Index">ComdisAI</a>
+                }
+                else
+                {
+                    <span class="navbar-brand">ComdisAI</span>
+                }
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Customers" asp-action="Index">Customers</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Uoms" asp-action="Index">Units of Measure</a>
-                        </li>
+                        @if (grantedActions.Contains(AuthorizationActionCodes.ViewHome))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Home" asp-action="Index">Home</a>
+                            </li>
+                        }
+                        @if (grantedActions.Contains(AuthorizationActionCodes.ViewPrivacy))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                            </li>
+                        }
+                        @if (grantedActions.Contains(AuthorizationActionCodes.ViewCustomer))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Customers" asp-action="Index">Customers</a>
+                            </li>
+                        }
+                        @if (grantedActions.Contains(AuthorizationActionCodes.ViewUom))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Uoms" asp-action="Index">Units of Measure</a>
+                            </li>
+                        }
+                        @if (grantedActions.Contains(AuthorizationActionCodes.ViewBank))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Banks" asp-action="Index">Banks</a>
+                            </li>
+                        }
+                        @if (grantedActions.Contains(AuthorizationActionCodes.ViewAction))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Actions" asp-action="Index">Actions</a>
+                            </li>
+                        }
+                        @if (grantedActions.Contains(AuthorizationActionCodes.ViewRole))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Roles" asp-action="Index">Roles</a>
+                            </li>
+                        }
+                        @if (grantedActions.Contains(AuthorizationActionCodes.ViewUser))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Users" asp-action="Index">Users</a>
+                            </li>
+                        }
+                    </ul>
+                    <ul class="navbar-nav">
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <li class="nav-item">
+                                <span class="nav-link text-dark">@User.Identity.Name — @(activeRole?.Code ?? "No active role")</span>
+                            </li>
+                            @if (activeRoles.Count > 1)
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="Authentication" asp-action="SelectRole">Switch role</a>
+                                </li>
+                            }
+                            <li class="nav-item">
+                                <form asp-area="" asp-controller="Authentication" asp-action="Logout" method="post">
+                                    <button type="submit" class="nav-link btn btn-link text-dark">Sign out</button>
+                                </form>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Authentication" asp-action="Login">Sign in</a>
+                            </li>
+                        }
                     </ul>
                 </div>
             </div>
@@ -45,7 +135,11 @@
 
     <footer class="border-top footer text-muted">
         <div class="container">
-            &copy; 2026 - ComdisAI - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            &copy; 2026 - ComdisAI
+            @if (grantedActions.Contains(AuthorizationActionCodes.ViewPrivacy))
+            {
+                <span> - </span><a asp-controller="Home" asp-action="Privacy">Privacy</a>
+            }
         </div>
     </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
