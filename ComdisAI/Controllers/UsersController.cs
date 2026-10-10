@@ -1,3 +1,4 @@
+using ComdisAI.Data;
 using ComdisAI.Models;
 using ComdisAI.Repositories;
 using ComdisAI.ViewModels.Users;
@@ -10,7 +11,8 @@ namespace ComdisAI.Controllers;
 
 public class UsersController(
     IUnitOfWork unitOfWork,
-    IPasswordHasher<User> passwordHasher) : Controller
+    IPasswordHasher<User> passwordHasher,
+    AppDbContext dbContext) : Controller
 {
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
@@ -26,6 +28,90 @@ public class UsersController(
                 LastLoginDateUtc = user.LastLoginDateUtc
             })
             .ToList());
+    }
+
+    public async Task<IActionResult> ManageRoles(int? id, CancellationToken cancellationToken)
+    {
+        var users = await unitOfWork.Repository<User>().GetAllAsync(cancellationToken);
+        var selectedUserId = id ?? users.OrderBy(user => user.Email).FirstOrDefault()?.Id;
+        if (selectedUserId.HasValue && users.All(user => user.Id != selectedUserId.Value))
+            return NotFound();
+
+        return View(await BuildManageRolesViewModelAsync(selectedUserId, cancellationToken));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ManageRoles(
+        ManageUserRolesViewModel input,
+        CancellationToken cancellationToken)
+    {
+        if (!input.UserId.HasValue)
+            return BadRequest();
+
+        var user = await unitOfWork.Repository<User>().GetByIdAsync(input.UserId.Value, cancellationToken);
+        if (user is null)
+            return NotFound();
+
+        var selectedRoleIds = input.SelectedRoleIds.Distinct().ToArray();
+        if (selectedRoleIds.Length != input.SelectedRoleIds.Count)
+        {
+            ModelState.AddModelError(nameof(input.SelectedRoleIds), "A role was selected more than once.");
+            return View(await BuildManageRolesViewModelAsync(
+                input.UserId,
+                cancellationToken,
+                input.SelectedRoleIds));
+        }
+
+        var availableRoleIds = await dbContext.Roles
+            .Select(role => role.Id)
+            .ToListAsync(cancellationToken);
+        if (selectedRoleIds.Any(roleId => !availableRoleIds.Contains(roleId)))
+        {
+            ModelState.AddModelError(
+                nameof(input.SelectedRoleIds),
+                "One or more selected roles are no longer available.");
+            return View(await BuildManageRolesViewModelAsync(
+                input.UserId,
+                cancellationToken,
+                input.SelectedRoleIds));
+        }
+
+        var assignments = await dbContext.UserRoles
+            .IgnoreQueryFilters()
+            .Where(userRole => userRole.UserId == user.Id)
+            .ToListAsync(cancellationToken);
+        var activeAssignments = assignments
+            .Where(userRole => availableRoleIds.Contains(userRole.RoleId))
+            .ToList();
+        var assignedRoleIds = activeAssignments.Select(userRole => userRole.RoleId).ToHashSet();
+        var assignmentsToRemove = activeAssignments
+            .Where(userRole => !selectedRoleIds.Contains(userRole.RoleId))
+            .ToArray();
+        var roleIdsToAdd = selectedRoleIds
+            .Where(roleId => !assignedRoleIds.Contains(roleId))
+            .ToArray();
+
+        dbContext.UserRoles.RemoveRange(assignmentsToRemove);
+        await dbContext.UserRoles.AddRangeAsync(
+            roleIdsToAdd.Select(roleId => new UserRole { UserId = user.Id, RoleId = roleId }),
+            cancellationToken);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception) when (IsUserRoleUniqueConstraintViolation(exception))
+        {
+            ModelState.AddModelError(
+                string.Empty,
+                "The role assignments changed while you were saving. Review the current assignments and try again.");
+            return View(await BuildManageRolesViewModelAsync(
+                input.UserId,
+                cancellationToken,
+                input.SelectedRoleIds));
+        }
+
+        return RedirectToAction(nameof(ManageRoles), new { id = user.Id });
     }
 
     public IActionResult Create() => View();
@@ -176,10 +262,62 @@ public class UsersController(
             cancellationToken) is not null;
     }
 
+    private async Task<ManageUserRolesViewModel> BuildManageRolesViewModelAsync(
+        int? userId,
+        CancellationToken cancellationToken,
+        IEnumerable<int>? selectedRoleIds = null)
+    {
+        var users = (await unitOfWork.Repository<User>().GetAllAsync(cancellationToken))
+            .OrderBy(user => user.Email)
+            .Select(user => new UserListItemViewModel
+            {
+                Id = user.Id,
+                Name = user.Name,
+                Surname = user.Surname,
+                Email = user.Email,
+                LastLoginDateUtc = user.LastLoginDateUtc
+            })
+            .ToList();
+        var roles = await dbContext.Roles
+            .AsNoTracking()
+            .OrderBy(role => role.Code)
+            .Select(role => new UserRoleOptionViewModel
+            {
+                Id = role.Id,
+                Code = role.Code,
+                Description = role.Description
+            })
+            .ToListAsync(cancellationToken);
+        var assignedRoleIds = userId.HasValue
+            ? await dbContext.UserRoles
+                .IgnoreQueryFilters()
+                .Where(userRole => userRole.UserId == userId.Value)
+                .Select(userRole => userRole.RoleId)
+                .ToListAsync(cancellationToken)
+            : [];
+        var availableRoleIds = roles.Select(role => role.Id).ToHashSet();
+
+        return new ManageUserRolesViewModel
+        {
+            UserId = userId,
+            SelectedRoleIds = selectedRoleIds?.ToList()
+                ?? assignedRoleIds.Where(availableRoleIds.Contains).ToList(),
+            Users = users,
+            Roles = roles
+        };
+    }
+
     private static bool IsEmailUniqueConstraintViolation(DbUpdateException exception) =>
         exception.InnerException is SqliteException
         {
             SqliteErrorCode: 19
         } sqliteException &&
         sqliteException.Message.Contains("IX_Users_NormalizedEmail", StringComparison.Ordinal);
+
+    private static bool IsUserRoleUniqueConstraintViolation(DbUpdateException exception) =>
+        exception.InnerException is SqliteException
+        {
+            SqliteErrorCode: 19,
+            SqliteExtendedErrorCode: 2067
+        };
 }

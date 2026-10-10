@@ -18,4 +18,5 @@ public class Role : AuditableEntity
     public DateTime? DeletedAtUtc { get; set; }
     public string? DeletedBy { get; set; }
     public ICollection<RoleAction> RoleActions { get; set; } = [];
+    public ICollection<UserRole> UserRoles { get; set; } = [];
 }

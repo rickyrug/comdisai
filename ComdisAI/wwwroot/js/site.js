@@ -47,3 +47,34 @@ document.querySelectorAll("[data-role-action-assignment]").forEach((form) => {
 
     updateSelectVisible();
 });
+
+document.querySelectorAll("[data-user-search]").forEach((searchInput) => {
+    const form = searchInput.closest("form");
+    const select = form?.querySelector("[data-user-select]");
+    const noMatchesMessage = form?.querySelector("[data-user-search-empty]");
+
+    if (!select || !noMatchesMessage) {
+        return;
+    }
+
+    const options = Array.from(select.querySelectorAll("option")).filter((option) => option.value !== "");
+
+    searchInput.addEventListener("input", () => {
+        const searchText = searchInput.value.trim().toLocaleLowerCase();
+        let visibleCount = 0;
+
+        options.forEach((option) => {
+            const matches = option.dataset.searchText.toLocaleLowerCase().includes(searchText);
+            option.hidden = !matches;
+            if (matches) {
+                visibleCount += 1;
+            }
+        });
+
+        if (select.selectedOptions[0]?.hidden) {
+            select.value = "";
+        }
+
+        noMatchesMessage.hidden = visibleCount > 0;
+    });
+});
