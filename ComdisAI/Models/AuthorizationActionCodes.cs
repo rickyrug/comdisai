@@ -8,6 +8,10 @@ public static class AuthorizationActionCodes
     public const string CreateCustomer = "CREATE_CUSTOMER";
     public const string EditCustomer = "EDIT_CUSTOMER";
     public const string DeleteCustomer = "DELETE_CUSTOMER";
+    public const string ViewProduct = "VIEW_PRODUCT";
+    public const string CreateProduct = "CREATE_PRODUCT";
+    public const string EditProduct = "EDIT_PRODUCT";
+    public const string DeleteProduct = "DELETE_PRODUCT";
     public const string ViewUom = "VIEW_UOM";
     public const string CreateUom = "CREATE_UOM";
     public const string EditUom = "EDIT_UOM";

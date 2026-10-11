@@ -21,6 +21,7 @@
         : new HashSet<string>(StringComparer.Ordinal);
     var canViewBanks = grantedActions.Contains(AuthorizationActionCodes.ViewBank);
     var canViewUoms = grantedActions.Contains(AuthorizationActionCodes.ViewUom);
+    var canViewProducts = grantedActions.Contains(AuthorizationActionCodes.ViewProduct);
     var canViewCustomers = grantedActions.Contains(AuthorizationActionCodes.ViewCustomer);
     var canViewActions = grantedActions.Contains(AuthorizationActionCodes.ViewAction);
     var canViewRoles = grantedActions.Contains(AuthorizationActionCodes.ViewRole);
@@ -61,7 +62,7 @@
                                 <a class="nav-link text-dark" asp-controller="Home" asp-action="Index">Home</a>
                             </li>
                         }
-                        @if (canViewBanks || canViewUoms)
+                        @if (canViewBanks || canViewUoms || canViewProducts)
                         {
                             <li class="nav-item dropdown">
                                 <button class="nav-link dropdown-toggle text-dark" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -78,6 +79,12 @@
                                     {
                                         <li>
                                             <a class="dropdown-item" asp-controller="Uoms" asp-action="Index">Units of Measure</a>
+                                        </li>
+                                    }
+                                    @if (canViewProducts)
+                                    {
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Products" asp-action="Index">Products</a>
                                         </li>
                                     }
                                 </ul>

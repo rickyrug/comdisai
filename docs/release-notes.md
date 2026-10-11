@@ -1,5 +1,13 @@
 # Release Notes
 
+## Unreleased — Products Dictionary
+
+### Added
+- Product dictionary MVC screens with searchable listing, create, edit, and logical delete.
+- Required product name (maximum 255 characters), case-insensitive unique five-character product code (shorter input is left-padded with zeros), and required unit-of-measure relationship.
+- Product audit and logical-delete metadata, active-product query filtering, and authorization actions/navigation.
+- `ProductsDictionary` EF Core migration (not applied automatically).
+
 ## Unreleased — Application Menu
 
 ### Changed
