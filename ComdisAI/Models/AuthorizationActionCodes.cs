@@ -20,6 +20,10 @@ public static class AuthorizationActionCodes
     public const string CreateStatus = "CREATE_STATUS";
     public const string EditStatus = "EDIT_STATUS";
     public const string DeleteStatus = "DELETE_STATUS";
+    public const string ViewTax = "VIEW_TAX";
+    public const string CreateTax = "CREATE_TAX";
+    public const string EditTax = "EDIT_TAX";
+    public const string DeleteTax = "DELETE_TAX";
     public const string ViewUom = "VIEW_UOM";
     public const string CreateUom = "CREATE_UOM";
     public const string EditUom = "EDIT_UOM";
