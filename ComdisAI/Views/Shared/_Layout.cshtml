@@ -19,6 +19,12 @@
     var grantedActions = User.Identity?.IsAuthenticated == true
         ? (await PermissionService.GetActiveActionCodesAsync(User)).ToHashSet(StringComparer.Ordinal)
         : new HashSet<string>(StringComparer.Ordinal);
+    var canViewBanks = grantedActions.Contains(AuthorizationActionCodes.ViewBank);
+    var canViewUoms = grantedActions.Contains(AuthorizationActionCodes.ViewUom);
+    var canViewCustomers = grantedActions.Contains(AuthorizationActionCodes.ViewCustomer);
+    var canViewActions = grantedActions.Contains(AuthorizationActionCodes.ViewAction);
+    var canViewRoles = grantedActions.Contains(AuthorizationActionCodes.ViewRole);
+    var canViewUsers = grantedActions.Contains(AuthorizationActionCodes.ViewUser);
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -43,11 +49,11 @@
                 {
                     <span class="navbar-brand">ComdisAI</span>
                 }
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between" id="navbarSupportedContent">
                     <ul class="navbar-nav flex-grow-1">
                         @if (grantedActions.Contains(AuthorizationActionCodes.ViewHome))
                         {
@@ -55,46 +61,74 @@
                                 <a class="nav-link text-dark" asp-controller="Home" asp-action="Index">Home</a>
                             </li>
                         }
-                        @if (grantedActions.Contains(AuthorizationActionCodes.ViewPrivacy))
+                        @if (canViewBanks || canViewUoms)
                         {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                            <li class="nav-item dropdown">
+                                <button class="nav-link dropdown-toggle text-dark" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Catalogs
+                                </button>
+                                <ul class="dropdown-menu">
+                                    @if (canViewBanks)
+                                    {
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Banks" asp-action="Index">Banks</a>
+                                        </li>
+                                    }
+                                    @if (canViewUoms)
+                                    {
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Uoms" asp-action="Index">Units of Measure</a>
+                                        </li>
+                                    }
+                                </ul>
                             </li>
                         }
-                        @if (grantedActions.Contains(AuthorizationActionCodes.ViewCustomer))
+                        @if (canViewCustomers)
                         {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Customers" asp-action="Index">Customers</a>
+                            <li class="nav-item dropdown">
+                                <button class="nav-link dropdown-toggle text-dark" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Sales
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Customers" asp-action="Index">Customers</a>
+                                    </li>
+                                </ul>
                             </li>
                         }
-                        @if (grantedActions.Contains(AuthorizationActionCodes.ViewUom))
+                        @if (canViewActions || canViewRoles || canViewUsers)
                         {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Uoms" asp-action="Index">Units of Measure</a>
-                            </li>
-                        }
-                        @if (grantedActions.Contains(AuthorizationActionCodes.ViewBank))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Banks" asp-action="Index">Banks</a>
-                            </li>
-                        }
-                        @if (grantedActions.Contains(AuthorizationActionCodes.ViewAction))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Actions" asp-action="Index">Actions</a>
-                            </li>
-                        }
-                        @if (grantedActions.Contains(AuthorizationActionCodes.ViewRole))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Roles" asp-action="Index">Roles</a>
-                            </li>
-                        }
-                        @if (grantedActions.Contains(AuthorizationActionCodes.ViewUser))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Users" asp-action="Index">Users</a>
+                            <li class="nav-item dropdown">
+                                <button class="nav-link dropdown-toggle text-dark" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                                    Administrator
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li class="dropend dropdown-submenu">
+                                        <button class="dropdown-item dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            Security
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            @if (canViewActions)
+                                            {
+                                                <li>
+                                                    <a class="dropdown-item" asp-controller="Actions" asp-action="Index">Actions</a>
+                                                </li>
+                                            }
+                                            @if (canViewRoles)
+                                            {
+                                                <li>
+                                                    <a class="dropdown-item" asp-controller="Roles" asp-action="Index">Roles</a>
+                                                </li>
+                                            }
+                                            @if (canViewUsers)
+                                            {
+                                                <li>
+                                                    <a class="dropdown-item" asp-controller="Users" asp-action="Index">Users</a>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </li>
+                                </ul>
                             </li>
                         }
                     </ul>

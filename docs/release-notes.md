@@ -1,5 +1,12 @@
 # Release Notes
 
+## Unreleased — Application Menu
+
+### Changed
+- Reorganized the shared top navigation into Catalogs, Sales, and Administrator > Security dropdowns.
+- Navigation destinations and their parent menus are shown according to the selected active role's view permissions.
+- Kept the menu responsive for mobile use and retained the existing account and role controls.
+
 ## Unreleased — Authorization Layer
 
 ### Added
