@@ -66,32 +66,43 @@
                         @if (canViewBanks || canViewUoms || canViewProducts || canViewProductCategories)
                         {
                             <li class="nav-item dropdown">
-                                <button class="nav-link dropdown-toggle text-dark" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <button class="nav-link dropdown-toggle text-dark" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                                     Catalogs
                                 </button>
                                 <ul class="dropdown-menu">
-                                    @if (canViewBanks)
-                                    {
-                                        <li>
-                                            <a class="dropdown-item" asp-controller="Banks" asp-action="Index">Banks</a>
-                                        </li>
-                                    }
-                                    @if (canViewUoms)
-                                    {
-                                        <li>
-                                            <a class="dropdown-item" asp-controller="Uoms" asp-action="Index">Units of Measure</a>
-                                        </li>
-                                    }
                                     @if (canViewProducts)
                                     {
                                         <li>
                                             <a class="dropdown-item" asp-controller="Products" asp-action="Index">Products</a>
                                         </li>
                                     }
-                                    @if (canViewProductCategories)
+                                   
+                                    @if (canViewBanks || canViewUoms)
                                     {
-                                        <li>
-                                            <a class="dropdown-item" asp-controller="ProductCategories" asp-action="Index">Product Categories</a>
+                                        <li class="dropend dropdown-submenu">
+                                            <button class="dropdown-item dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                Configuration
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                @if (canViewBanks)
+                                                {
+                                                    <li>
+                                                        <a class="dropdown-item" asp-controller="Banks" asp-action="Index">Banks</a>
+                                                    </li>
+                                                }
+                                                @if (canViewUoms)
+                                                {
+                                                    <li>
+                                                        <a class="dropdown-item" asp-controller="Uoms" asp-action="Index">Units of Measure</a>
+                                                    </li>
+                                                }
+                                                 @if (canViewProductCategories)
+                                                    {
+                                                        <li>
+                                                            <a class="dropdown-item" asp-controller="ProductCategories" asp-action="Index">Product Categories</a>
+                                                        </li>
+                                                    }
+                                            </ul>
                                         </li>
                                     }
                                 </ul>

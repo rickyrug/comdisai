@@ -4,8 +4,11 @@ The application uses a shared top navigation that remains available throughout t
 
 - Home
 - Catalogs
-  - Banks
-  - Units of Measure
+  - Products
+  - Product Categories
+  - Configuration
+    - Banks
+    - Units of Measure
 - Sales
   - Customers
 - Administrator
