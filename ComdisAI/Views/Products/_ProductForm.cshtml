@@ -1,0 +1,20 @@
+@model ComdisAI.ViewModels.Products.ProductFormViewModel
+
+<div class="mb-3">
+    <label asp-for="Name" class="form-label"></label>
+    <input asp-for="Name" class="form-control" maxlength="255" />
+    <span asp-validation-for="Name" class="text-danger"></span>
+</div>
+<div class="mb-3">
+    <label asp-for="Code" class="form-label"></label>
+    <input asp-for="Code" class="form-control" maxlength="5" />
+    <span asp-validation-for="Code" class="text-danger"></span>
+    <div class="form-text">Codes shorter than five characters are padded with leading zeros.</div>
+</div>
+<div class="mb-3">
+    <label asp-for="UomId" class="form-label"></label>
+    <select asp-for="UomId" asp-items="Model.Uoms" class="form-select">
+        <option value="0">Select a unit of measure</option>
+    </select>
+    <span asp-validation-for="UomId" class="text-danger"></span>
+</div>

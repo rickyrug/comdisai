@@ -24,6 +24,28 @@ public class AppDbContext(
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.Entity<Customer>().HasQueryFilter(customer => !customer.IsDeleted);
+        modelBuilder.Entity<Product>(entity =>
+        {
+            entity.Property(product => product.Name)
+                .HasMaxLength(255)
+                .IsRequired();
+            entity.Property(product => product.Code)
+                .HasMaxLength(5)
+                .IsRequired();
+            entity.Property(product => product.UomId)
+                .HasColumnName("Uom");
+            entity.Property<string>("NormalizedCode")
+                .HasMaxLength(5)
+                .IsRequired();
+            entity.HasIndex("NormalizedCode")
+                .IsUnique()
+                .HasDatabaseName("IX_Products_NormalizedCode");
+            entity.HasQueryFilter(product => !product.IsDeleted);
+            entity.HasOne(product => product.Uom)
+                .WithMany()
+                .HasForeignKey(product => product.UomId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
         modelBuilder.Entity<Uom>(entity =>
         {
             entity.Property(uom => uom.Name)
@@ -212,9 +234,14 @@ public class AppDbContext(
                     deletedUser.DeletedAtUtc = now;
                     deletedUser.DeletedBy = actor;
                 }
+                else if (entry.Entity is Product { IsDeleted: true, DeletedAtUtc: null } product)
+                {
+                    product.DeletedAtUtc = now;
+                    product.DeletedBy = actor;
+                }
             }
             else if (entry.State == EntityState.Deleted &&
-                     entry.Entity is Customer or Uom or Bank or ComdisAI.Models.Actions or Role or User)
+                     entry.Entity is Customer or Product or Uom or Bank or ComdisAI.Models.Actions or Role or User)
             {
                 var entity = entry.Entity;
                 switch (entity)
@@ -223,6 +250,11 @@ public class AppDbContext(
                         customer.IsDeleted = true;
                         customer.DeletedAtUtc = now;
                         customer.DeletedBy = actor;
+                        break;
+                    case Product product:
+                        product.IsDeleted = true;
+                        product.DeletedAtUtc = now;
+                        product.DeletedBy = actor;
                         break;
                     case Uom uom:
                         uom.IsDeleted = true;
@@ -272,5 +304,7 @@ public class AppDbContext(
             Entry(role).Property<string>("NormalizedCode").CurrentValue = role.Code.Trim().ToUpperInvariant();
         else if (entity is User user)
             Entry(user).Property<string>("NormalizedEmail").CurrentValue = User.NormalizeEmail(user.Email);
+        else if (entity is Product product)
+            Entry(product).Property<string>("NormalizedCode").CurrentValue = product.Code.Trim().ToUpperInvariant();
     }
 }
