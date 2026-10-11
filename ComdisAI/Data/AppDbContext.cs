@@ -13,6 +13,7 @@ public class AppDbContext(
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
+    public DbSet<Status> Statuses => Set<Status>();
     public DbSet<Uom> Uoms => Set<Uom>();
     public DbSet<Bank> Banks => Set<Bank>();
     public DbSet<Actions> Actions => Set<Actions>();
@@ -46,6 +47,25 @@ public class AppDbContext(
                 .IsUnique()
                 .HasDatabaseName("IX_ProductCategories_NormalizedPrefix");
             entity.HasQueryFilter(category => !category.IsDeleted);
+        });
+        modelBuilder.Entity<Status>(entity =>
+        {
+            entity.Property(status => status.Name)
+                .HasMaxLength(255)
+                .IsRequired();
+            entity.Property(status => status.Entity)
+                .HasMaxLength(20)
+                .IsRequired();
+            entity.Property<string>("NormalizedName")
+                .HasMaxLength(255)
+                .IsRequired();
+            entity.Property<string>("NormalizedEntity")
+                .HasMaxLength(20)
+                .IsRequired();
+            entity.HasIndex("NormalizedEntity", "NormalizedName")
+                .IsUnique()
+                .HasDatabaseName("IX_Statuses_NormalizedEntity_NormalizedName");
+            entity.HasQueryFilter(status => !status.IsDeleted);
         });
         modelBuilder.Entity<Product>(entity =>
         {
@@ -268,6 +288,11 @@ public class AppDbContext(
                     category.DeletedAtUtc = now;
                     category.DeletedBy = actor;
                 }
+                else if (entry.Entity is Status { IsDeleted: true, DeletedAtUtc: null } status)
+                {
+                    status.DeletedAtUtc = now;
+                    status.DeletedBy = actor;
+                }
                 else if (entry.Entity is Product { IsDeleted: true, DeletedAtUtc: null } product)
                 {
                     product.DeletedAtUtc = now;
@@ -275,7 +300,7 @@ public class AppDbContext(
                 }
             }
             else if (entry.State == EntityState.Deleted &&
-                     entry.Entity is Customer or Product or ProductCategory or Uom or Bank or ComdisAI.Models.Actions or Role or User)
+                     entry.Entity is Customer or Product or ProductCategory or Status or Uom or Bank or ComdisAI.Models.Actions or Role or User)
             {
                 var entity = entry.Entity;
                 switch (entity)
@@ -294,6 +319,11 @@ public class AppDbContext(
                         category.IsDeleted = true;
                         category.DeletedAtUtc = now;
                         category.DeletedBy = actor;
+                        break;
+                    case Status status:
+                        status.IsDeleted = true;
+                        status.DeletedAtUtc = now;
+                        status.DeletedBy = actor;
                         break;
                     case Uom uom:
                         uom.IsDeleted = true;
@@ -349,6 +379,11 @@ public class AppDbContext(
         {
             Entry(category).Property<string>("NormalizedName").CurrentValue = category.Name.Trim().ToUpperInvariant();
             Entry(category).Property<string>("NormalizedPrefix").CurrentValue = category.Prefix.Trim().ToUpperInvariant();
+        }
+        else if (entity is Status status)
+        {
+            Entry(status).Property<string>("NormalizedName").CurrentValue = status.Name.Trim().ToUpperInvariant();
+            Entry(status).Property<string>("NormalizedEntity").CurrentValue = status.Entity.Trim().ToUpperInvariant();
         }
     }
 }

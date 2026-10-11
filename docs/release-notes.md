@@ -1,5 +1,12 @@
 # Release Notes
 
+## Unreleased — Status Dictionary
+
+### Added
+- Audited Status dictionary with required Entity (maximum 20 characters) and Name (maximum 255 characters), unique case-insensitively per entity.
+- Status list, create, edit, and logical delete screens under Catalogs → Configuration → Status, with role-based authorization.
+- `StatusDictionary` EF Core migration (not applied automatically).
+
 ## Unreleased — Product Category on Products
 
 ### Added
