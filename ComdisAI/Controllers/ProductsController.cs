@@ -20,6 +20,7 @@ public class ProductsController(IUnitOfWork unitOfWork, AppDbContext dbContext) 
             .IgnoreQueryFilters()
             .Where(product => !product.IsDeleted)
             .Include(product => product.Uom)
+            .Include(product => product.ProductCategory)
             .AsNoTracking();
 
         if (!string.IsNullOrEmpty(normalizedSearchTerm))
@@ -27,7 +28,8 @@ public class ProductsController(IUnitOfWork unitOfWork, AppDbContext dbContext) 
             productsQuery = productsQuery.Where(product =>
                 product.Name.ToUpper().Contains(normalizedSearchTerm)
                 || product.Code.ToUpper().Contains(normalizedSearchTerm)
-                || product.Uom.Name.ToUpper().Contains(normalizedSearchTerm));
+                || product.Uom.Name.ToUpper().Contains(normalizedSearchTerm)
+                || product.ProductCategory.Name.ToUpper().Contains(normalizedSearchTerm));
         }
 
         var products = await productsQuery
@@ -44,36 +46,45 @@ public class ProductsController(IUnitOfWork unitOfWork, AppDbContext dbContext) 
 
     [RequireAction(AuthorizationActionCodes.CreateProduct)]
     public async Task<IActionResult> Create(CancellationToken cancellationToken) =>
-        View(await CreateFormAsync(new ProductFormViewModel(), null, cancellationToken));
+        View(await CreateFormAsync(new ProductFormViewModel(), null, null, cancellationToken));
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequireAction(AuthorizationActionCodes.CreateProduct)]
     public async Task<IActionResult> Create(
-        [Bind("Name,Code,UomId")] ProductFormViewModel input,
+        [Bind("Name,Code,UomId,ProductCategoryId")] ProductFormViewModel input,
         CancellationToken cancellationToken)
     {
         NormalizeAndValidate(input);
         if (!ModelState.IsValid)
-            return View(await CreateFormAsync(input, null, cancellationToken));
+            return View(await CreateFormAsync(input, null, null, cancellationToken));
 
         if (!await ActiveUomExistsAsync(input.UomId, cancellationToken))
         {
             ModelState.AddModelError(nameof(input.UomId), "Select an active unit of measure.");
-            return View(await CreateFormAsync(input, null, cancellationToken));
+            return View(await CreateFormAsync(input, null, null, cancellationToken));
         }
 
-        if (await CodeIsReservedAsync(input.Code, null, cancellationToken))
+        var category = await FindCategoryAsync(input.ProductCategoryId, cancellationToken);
+        if (category is null)
+        {
+            ModelState.AddModelError(nameof(input.ProductCategoryId), "Select an active product category.");
+            return View(await CreateFormAsync(input, null, null, cancellationToken));
+        }
+
+        var code = BuildCode(category, input.Code);
+        if (await CodeIsReservedAsync(code, null, cancellationToken))
         {
             ModelState.AddModelError(nameof(input.Code), "A product with this code already exists.");
-            return View(await CreateFormAsync(input, null, cancellationToken));
+            return View(await CreateFormAsync(input, null, null, cancellationToken));
         }
 
         var product = new Product
         {
             Name = input.Name,
-            Code = input.Code,
-            UomId = input.UomId
+            Code = code,
+            UomId = input.UomId,
+            ProductCategoryId = category.Id
         };
         await unitOfWork.Repository<Product>().AddAsync(product, cancellationToken);
         try
@@ -83,7 +94,7 @@ public class ProductsController(IUnitOfWork unitOfWork, AppDbContext dbContext) 
         catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
         {
             ModelState.AddModelError(nameof(input.Code), "A product with this code already exists.");
-            return View(await CreateFormAsync(input, null, cancellationToken));
+            return View(await CreateFormAsync(input, null, null, cancellationToken));
         }
 
         return RedirectToAction(nameof(Index));
@@ -100,10 +111,11 @@ public class ProductsController(IUnitOfWork unitOfWork, AppDbContext dbContext) 
         {
             Id = product.Id,
             Name = product.Name,
-            Code = product.Code,
-            UomId = product.UomId
+            Code = product.Code[1..],
+            UomId = product.UomId,
+            ProductCategoryId = product.ProductCategoryId
         };
-        return View(await CreateFormAsync(input, product.UomId, cancellationToken));
+        return View(await CreateFormAsync(input, product.UomId, product.ProductCategoryId, cancellationToken));
     }
 
     [HttpPost]
@@ -111,7 +123,7 @@ public class ProductsController(IUnitOfWork unitOfWork, AppDbContext dbContext) 
     [RequireAction(AuthorizationActionCodes.EditProduct)]
     public async Task<IActionResult> Edit(
         int id,
-        [Bind("Name,Code,UomId")] ProductFormViewModel input,
+        [Bind("Name,Code,UomId,ProductCategoryId")] ProductFormViewModel input,
         CancellationToken cancellationToken)
     {
         input.Id = id;
@@ -122,24 +134,35 @@ public class ProductsController(IUnitOfWork unitOfWork, AppDbContext dbContext) 
             return NotFound();
 
         if (!ModelState.IsValid)
-            return View(await CreateFormAsync(input, product.UomId, cancellationToken));
+            return View(await CreateFormAsync(input, product.UomId, product.ProductCategoryId, cancellationToken));
 
         if (input.UomId != product.UomId &&
             !await ActiveUomExistsAsync(input.UomId, cancellationToken))
         {
             ModelState.AddModelError(nameof(input.UomId), "Select an active unit of measure.");
-            return View(await CreateFormAsync(input, product.UomId, cancellationToken));
+            return View(await CreateFormAsync(input, product.UomId, product.ProductCategoryId, cancellationToken));
         }
 
-        if (await CodeIsReservedAsync(input.Code, id, cancellationToken))
+        var category = input.ProductCategoryId == product.ProductCategoryId
+            ? product.ProductCategory
+            : await FindCategoryAsync(input.ProductCategoryId, cancellationToken);
+        if (category is null)
+        {
+            ModelState.AddModelError(nameof(input.ProductCategoryId), "Select an active product category.");
+            return View(await CreateFormAsync(input, product.UomId, product.ProductCategoryId, cancellationToken));
+        }
+
+        var code = BuildCode(category, input.Code);
+        if (await CodeIsReservedAsync(code, id, cancellationToken))
         {
             ModelState.AddModelError(nameof(input.Code), "A product with this code already exists.");
-            return View(await CreateFormAsync(input, product.UomId, cancellationToken));
+            return View(await CreateFormAsync(input, product.UomId, product.ProductCategoryId, cancellationToken));
         }
 
         product.Name = input.Name;
-        product.Code = input.Code;
+        product.Code = code;
         product.UomId = input.UomId;
+        product.ProductCategoryId = category.Id;
         unitOfWork.Repository<Product>().Update(product);
         try
         {
@@ -148,7 +171,7 @@ public class ProductsController(IUnitOfWork unitOfWork, AppDbContext dbContext) 
         catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
         {
             ModelState.AddModelError(nameof(input.Code), "A product with this code already exists.");
-            return View(await CreateFormAsync(input, product.UomId, cancellationToken));
+            return View(await CreateFormAsync(input, product.UomId, product.ProductCategoryId, cancellationToken));
         }
 
         return RedirectToAction(nameof(Index));
@@ -173,6 +196,7 @@ public class ProductsController(IUnitOfWork unitOfWork, AppDbContext dbContext) 
         await dbContext.Products
             .IgnoreQueryFilters()
             .Include(product => product.Uom)
+            .Include(product => product.ProductCategory)
             .SingleOrDefaultAsync(
                 product => product.Id == id && !product.IsDeleted,
                 cancellationToken);
@@ -194,6 +218,7 @@ public class ProductsController(IUnitOfWork unitOfWork, AppDbContext dbContext) 
     private async Task<ProductFormViewModel> CreateFormAsync(
         ProductFormViewModel input,
         int? includeDeletedUomId,
+        int? includeDeletedCategoryId,
         CancellationToken cancellationToken)
     {
         var uoms = await dbContext.Uoms
@@ -211,6 +236,22 @@ public class ProductsController(IUnitOfWork unitOfWork, AppDbContext dbContext) 
                 Selected = uom.Id == input.UomId
             })
             .ToList();
+
+        var categories = await dbContext.ProductCategories
+            .IgnoreQueryFilters()
+            .Where(category => !category.IsDeleted || category.Id == includeDeletedCategoryId)
+            .OrderBy(category => category.Name)
+            .Select(category => new { category.Id, category.Name, category.Prefix, category.IsDeleted })
+            .ToListAsync(cancellationToken);
+
+        input.ProductCategories = categories
+            .Select(category => new SelectListItem
+            {
+                Value = category.Id.ToString(),
+                Text = $"{category.Name} ({category.Prefix})" + (category.IsDeleted ? " (deleted)" : string.Empty),
+                Selected = category.Id == input.ProductCategoryId
+            })
+            .ToList();
         return input;
     }
 
@@ -218,12 +259,21 @@ public class ProductsController(IUnitOfWork unitOfWork, AppDbContext dbContext) 
     {
         input.Name = input.Name?.Trim() ?? string.Empty;
         input.Code = input.Code?.Trim() ?? string.Empty;
-        if (input.Code.Length > 0)
-            input.Code = input.Code.PadLeft(5, '0');
+        var codeIsValid = input.Code.Length is >= 1 and <= 4 && input.Code.All(char.IsAsciiDigit);
+        if (codeIsValid)
+            input.Code = input.Code.PadLeft(4, '0');
         ModelState.Remove(nameof(input.Name));
         ModelState.Remove(nameof(input.Code));
         TryValidateModel(input);
+        if (!codeIsValid)
+            ModelState.AddModelError(nameof(input.Code), "Enter a number of 1 to 4 digits.");
     }
+
+    private async Task<ProductCategory?> FindCategoryAsync(int id, CancellationToken cancellationToken) =>
+        await dbContext.ProductCategories.SingleOrDefaultAsync(category => category.Id == id, cancellationToken);
+
+    private static string BuildCode(ProductCategory category, string number) =>
+        category.Prefix.Trim().ToUpperInvariant() + number;
 
     private static bool IsUniqueConstraintViolation(DbUpdateException exception) =>
         exception.InnerException is SqliteException

@@ -18,5 +18,11 @@ This table needs to have the audit fields.
 |Name|nvarchar(255)|false||
 |Code|nvarchar(5)|false|uniq|
 |Uom|int|false|FK to Uom table|
+|ProductCategory|int|false|FK to ProductCategories|
+
+
+# Logic Code
+
+The product code needs to have a lenght of 5 caracters with leading left 0. But the format needs to be - {ProductCategories.Prefix}{leding 0}{userinput}
 
 

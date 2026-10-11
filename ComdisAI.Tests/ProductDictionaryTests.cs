@@ -25,7 +25,8 @@ public sealed class ProductDictionaryTests
         {
             Name = string.Empty,
             Code = string.Empty,
-            UomId = 1
+            UomId = 1,
+            ProductCategoryId = 1
         };
         var results = new List<ValidationResult>();
 
@@ -39,10 +40,12 @@ public sealed class ProductDictionaryTests
     {
         using var database = await CreateDatabaseAsync();
         var uom = NewUom("Each");
+        var category = NewCategory("A");
         database.Context.Uoms.Add(uom);
+        database.Context.ProductCategories.Add(category);
         await database.Context.SaveChangesAsync();
 
-        var product = NewProduct("P-01", uom.Id);
+        var product = NewProduct("P-01", uom.Id, category.Id);
         database.Context.Products.Add(product);
         await database.Context.SaveChangesAsync();
 
@@ -60,7 +63,7 @@ public sealed class ProductDictionaryTests
             .IgnoreQueryFilters()
             .AnyAsync(candidate => candidate.Id == product.Id));
 
-        database.Context.Products.Add(NewProduct("p-01", uom.Id));
+        database.Context.Products.Add(NewProduct("p-01", uom.Id, category.Id));
         await Assert.ThrowsAsync<DbUpdateException>(() => database.Context.SaveChangesAsync());
     }
 
@@ -68,19 +71,22 @@ public sealed class ProductDictionaryTests
     public async Task Product_requires_an_existing_unit_of_measure()
     {
         using var database = await CreateDatabaseAsync();
-        database.Context.Products.Add(NewProduct("P-01", 123));
+        database.Context.Products.Add(NewProduct("P-01", 123, 1));
 
         await Assert.ThrowsAsync<DbUpdateException>(() => database.Context.SaveChangesAsync());
     }
 
     [Theory]
-    [InlineData("123", "00123")]
-    [InlineData("01234", "01234")]
-    public async Task Create_pads_product_code_to_five_characters(string submittedCode, string expectedCode)
+    [InlineData("123", "A0123")]
+    [InlineData("1234", "A1234")]
+    [InlineData("7", "A0007")]
+    public async Task Create_builds_code_from_category_prefix_and_zero_padded_number(string submittedCode, string expectedCode)
     {
         using var database = await CreateDatabaseAsync();
         var uom = NewUom("Each");
+        var category = NewCategory("A");
         database.Context.Uoms.Add(uom);
+        database.Context.ProductCategories.Add(category);
         await database.Context.SaveChangesAsync();
 
         var result = await CreateController(database.Context).Create(
@@ -88,7 +94,8 @@ public sealed class ProductDictionaryTests
             {
                 Name = "Test product",
                 Code = submittedCode,
-                UomId = uom.Id
+                UomId = uom.Id,
+                ProductCategoryId = category.Id
             },
             CancellationToken.None);
 
@@ -98,37 +105,42 @@ public sealed class ProductDictionaryTests
     }
 
     [Fact]
-    public async Task Create_rejects_codes_longer_than_five_characters_without_truncating()
+    public async Task Create_rejects_numbers_longer_than_four_digits_or_non_numeric()
     {
         using var database = await CreateDatabaseAsync();
         var uom = NewUom("Each");
+        var category = NewCategory("A");
         database.Context.Uoms.Add(uom);
+        database.Context.ProductCategories.Add(category);
         await database.Context.SaveChangesAsync();
 
         var result = await CreateController(database.Context).Create(
             new ProductFormViewModel
             {
                 Name = "Test product",
-                Code = "123456",
-                UomId = uom.Id
+                Code = "12345",
+                UomId = uom.Id,
+                ProductCategoryId = category.Id
             },
             CancellationToken.None);
 
         var view = Assert.IsType<ViewResult>(result);
         var model = Assert.IsType<ProductFormViewModel>(view.Model);
-        Assert.Equal("123456", model.Code);
+        Assert.Equal("12345", model.Code);
         Assert.False(view.ViewData.ModelState.IsValid);
         Assert.Empty(await database.Context.Products.ToListAsync());
     }
 
     [Fact]
-    public async Task Create_rejects_a_code_that_matches_after_zero_padding()
+    public async Task Create_rejects_a_duplicate_final_code()
     {
         using var database = await CreateDatabaseAsync();
         var uom = NewUom("Each");
+        var category = NewCategory("A");
         database.Context.Uoms.Add(uom);
+        database.Context.ProductCategories.Add(category);
         await database.Context.SaveChangesAsync();
-        database.Context.Products.Add(NewProduct("00123", uom.Id));
+        database.Context.Products.Add(NewProduct("A0123", uom.Id, category.Id));
         await database.Context.SaveChangesAsync();
 
         var result = await CreateController(database.Context).Create(
@@ -136,7 +148,8 @@ public sealed class ProductDictionaryTests
             {
                 Name = "Duplicate product",
                 Code = "123",
-                UomId = uom.Id
+                UomId = uom.Id,
+                ProductCategoryId = category.Id
             },
             CancellationToken.None);
 
@@ -146,13 +159,17 @@ public sealed class ProductDictionaryTests
     }
 
     [Fact]
-    public async Task Edit_pads_product_code_to_five_characters()
+    public async Task Edit_rebuilds_code_when_category_changes()
     {
         using var database = await CreateDatabaseAsync();
         var uom = NewUom("Each");
+        var category = NewCategory("A");
         database.Context.Uoms.Add(uom);
+        database.Context.ProductCategories.Add(category);
         await database.Context.SaveChangesAsync();
-        var product = NewProduct("12345", uom.Id);
+        var other = NewCategory("B");
+        database.Context.ProductCategories.Add(other);
+        var product = NewProduct("A1234", uom.Id, category.Id);
         database.Context.Products.Add(product);
         await database.Context.SaveChangesAsync();
 
@@ -162,12 +179,13 @@ public sealed class ProductDictionaryTests
             {
                 Name = product.Name,
                 Code = "42",
-                UomId = uom.Id
+                UomId = uom.Id,
+                ProductCategoryId = other.Id
             },
             CancellationToken.None);
 
         Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal("00042", product.Code);
+        Assert.Equal("B0042", product.Code);
     }
 
     [Fact]
@@ -194,6 +212,7 @@ public sealed class ProductDictionaryTests
         Assert.Contains("Name", columns);
         Assert.Contains("Code", columns);
         Assert.Contains("Uom", columns);
+        Assert.Contains("ProductCategory", columns);
         Assert.Contains("CreatedAtUtc", columns);
         Assert.Contains("CreatedBy", columns);
         Assert.Contains("UpdatedAtUtc", columns);
@@ -206,6 +225,34 @@ public sealed class ProductDictionaryTests
     }
 
     [Fact]
+    public async Task Create_rejects_a_missing_product_category()
+    {
+        using var database = await CreateDatabaseAsync();
+        var uom = NewUom("Each");
+        database.Context.Uoms.Add(uom);
+        await database.Context.SaveChangesAsync();
+
+        var result = await CreateController(database.Context).Create(
+            new ProductFormViewModel { Name = "Test", Code = "1", UomId = uom.Id, ProductCategoryId = 99 },
+            CancellationToken.None);
+
+        Assert.False(Assert.IsType<ViewResult>(result).ViewData.ModelState.IsValid);
+        Assert.Empty(await database.Context.Products.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Product_requires_an_existing_product_category()
+    {
+        using var database = await CreateDatabaseAsync();
+        var uom = NewUom("Each");
+        database.Context.Uoms.Add(uom);
+        await database.Context.SaveChangesAsync();
+        database.Context.Products.Add(NewProduct("A0001", uom.Id, 99));
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => database.Context.SaveChangesAsync());
+    }
+
+    [Fact]
     public async Task Create_form_offers_only_active_units_of_measure()
     {
         using var database = await CreateDatabaseAsync();
@@ -213,6 +260,7 @@ public sealed class ProductDictionaryTests
         var deletedUom = NewUom("Box");
         deletedUom.IsDeleted = true;
         database.Context.Uoms.AddRange(activeUom, deletedUom);
+        database.Context.ProductCategories.Add(NewCategory("A"));
         await database.Context.SaveChangesAsync();
 
         var result = await CreateController(database.Context).Create(CancellationToken.None);
@@ -249,12 +297,14 @@ public sealed class ProductDictionaryTests
     {
         using var database = await CreateDatabaseAsync();
         var uom = NewUom("Case");
+        var category = NewCategory("A");
         database.Context.Uoms.Add(uom);
+        database.Context.ProductCategories.Add(category);
         await database.Context.SaveChangesAsync();
 
-        var matchingByName = NewProduct("A-01", uom.Id, "Steel bolt");
-        var matchingByCode = NewProduct("Z-GEAR", uom.Id, "Widget");
-        var deleted = NewProduct("D-01", uom.Id, "Deleted part");
+        var matchingByName = NewProduct("A-01", uom.Id, category.Id, "Steel bolt");
+        var matchingByCode = NewProduct("Z-GEAR", uom.Id, category.Id, "Widget");
+        var deleted = NewProduct("D-01", uom.Id, category.Id, "Deleted part");
         deleted.IsDeleted = true;
         database.Context.Products.AddRange(matchingByName, matchingByCode, deleted);
         await database.Context.SaveChangesAsync();
@@ -272,12 +322,20 @@ public sealed class ProductDictionaryTests
         Assert.DoesNotContain(uomMatches, product => product.IsDeleted);
     }
 
-    private static Product NewProduct(string code, int uomId, string name = "Test product") =>
+    private static Product NewProduct(string code, int uomId, int categoryId, string name = "Test product") =>
         new()
         {
             Name = name,
             Code = code,
-            UomId = uomId
+            UomId = uomId,
+            ProductCategoryId = categoryId
+        };
+
+    private static ProductCategory NewCategory(string prefix, string? name = null) =>
+        new()
+        {
+            Name = name ?? $"Category {prefix}",
+            Prefix = prefix
         };
 
     private static Uom NewUom(string name) =>

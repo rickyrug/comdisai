@@ -68,6 +68,12 @@ public class AppDbContext(
                 .WithMany()
                 .HasForeignKey(product => product.UomId)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.Property(product => product.ProductCategoryId)
+                .HasColumnName("ProductCategory");
+            entity.HasOne(product => product.ProductCategory)
+                .WithMany()
+                .HasForeignKey(product => product.ProductCategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
         modelBuilder.Entity<Uom>(entity =>
         {

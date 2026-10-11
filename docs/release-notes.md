@@ -1,5 +1,14 @@
 # Release Notes
 
+## Unreleased — Product Category on Products
+
+### Added
+- Required product category (FK to `ProductCategories`, column `ProductCategory`) on products, selectable in the form, shown and searchable in the listing.
+- `ProductCategoryOnProducts` EF Core migration (not applied automatically; assumes the Products table is empty). Apply with `dotnet ef database update --project ComdisAI`.
+
+### Changed
+- Product code is now `{category prefix}{number}`: the user enters 1–4 digits, left-padded with zeros to 4 (e.g. prefix `A` + `7` = `A0007`). The unique code check applies to the final code; changing the category or number recomputes it.
+
 ## Unreleased — Product Category Dictionary
 
 ### Added

@@ -17,6 +17,9 @@ public class Product : AuditableEntity
     public int UomId { get; set; }
     public Uom Uom { get; set; } = null!;
 
+    public int ProductCategoryId { get; set; }
+    public ProductCategory ProductCategory { get; set; } = null!;
+
     public bool IsDeleted { get; set; }
     public DateTime? DeletedAtUtc { get; set; }
     public string? DeletedBy { get; set; }
