@@ -16,6 +16,10 @@ public static class AuthorizationActionCodes
     public const string CreateProductCategory = "CREATE_PRODUCT_CATEGORY";
     public const string EditProductCategory = "EDIT_PRODUCT_CATEGORY";
     public const string DeleteProductCategory = "DELETE_PRODUCT_CATEGORY";
+    public const string ViewStatus = "VIEW_STATUS";
+    public const string CreateStatus = "CREATE_STATUS";
+    public const string EditStatus = "EDIT_STATUS";
+    public const string DeleteStatus = "DELETE_STATUS";
     public const string ViewUom = "VIEW_UOM";
     public const string CreateUom = "CREATE_UOM";
     public const string EditUom = "EDIT_UOM";

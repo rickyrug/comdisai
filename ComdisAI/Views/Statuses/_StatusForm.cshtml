@@ -1,0 +1,12 @@
+@model Status
+
+<div class="mb-3">
+    <label asp-for="Entity" class="form-label"></label>
+    <input asp-for="Entity" class="form-control" maxlength="20" />
+    <span asp-validation-for="Entity" class="text-danger"></span>
+</div>
+<div class="mb-3">
+    <label asp-for="Name" class="form-label"></label>
+    <input asp-for="Name" class="form-control" maxlength="255" />
+    <span asp-validation-for="Name" class="text-danger"></span>
+</div>
