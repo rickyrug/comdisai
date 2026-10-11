@@ -7,9 +7,9 @@
 </div>
 <div class="mb-3">
     <label asp-for="Code" class="form-label"></label>
-    <input asp-for="Code" class="form-control" maxlength="5" />
+    <input asp-for="Code" class="form-control" maxlength="4" inputmode="numeric" />
     <span asp-validation-for="Code" class="text-danger"></span>
-    <div class="form-text">Codes shorter than five characters are padded with leading zeros.</div>
+    <div class="form-text">Enter up to 4 digits. The final code is the category prefix plus the number padded with leading zeros (e.g. A0007).</div>
 </div>
 <div class="mb-3">
     <label asp-for="UomId" class="form-label"></label>
@@ -17,4 +17,11 @@
         <option value="0">Select a unit of measure</option>
     </select>
     <span asp-validation-for="UomId" class="text-danger"></span>
+</div>
+<div class="mb-3">
+    <label asp-for="ProductCategoryId" class="form-label"></label>
+    <select asp-for="ProductCategoryId" asp-items="Model.ProductCategories" class="form-select">
+        <option value="0">Select a product category</option>
+    </select>
+    <span asp-validation-for="ProductCategoryId" class="text-danger"></span>
 </div>

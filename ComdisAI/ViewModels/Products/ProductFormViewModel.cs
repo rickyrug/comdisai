@@ -12,12 +12,18 @@ public sealed class ProductFormViewModel
     public string Name { get; set; } = string.Empty;
 
     [Required]
-    [StringLength(5)]
+    [StringLength(4)]
+    [Display(Name = "Code number")]
     public string Code { get; set; } = string.Empty;
 
     [Range(1, int.MaxValue)]
     [Display(Name = "Unit of measure")]
     public int UomId { get; set; }
 
+    [Range(1, int.MaxValue)]
+    [Display(Name = "Product category")]
+    public int ProductCategoryId { get; set; }
+
     public IReadOnlyList<SelectListItem> Uoms { get; set; } = [];
+    public IReadOnlyList<SelectListItem> ProductCategories { get; set; } = [];
 }

@@ -13,7 +13,7 @@
     <div class="col-sm-8 col-md-6">
         <label for="searchTerm" class="visually-hidden">Search products</label>
         <input id="searchTerm" name="searchTerm" value="@Model.SearchTerm" class="form-control"
-               type="search" placeholder="Search by name, code, or unit of measure" />
+               type="search" placeholder="Search by name, code, category, or unit of measure" />
     </div>
     <div class="col-auto">
         <button type="submit" class="btn btn-outline-primary">Search</button>
@@ -32,6 +32,7 @@ else
             <tr>
                 <th>Code</th>
                 <th>Name</th>
+                <th>Category</th>
                 <th>Unit of measure</th>
                 <th></th>
             </tr>
@@ -42,6 +43,7 @@ else
                 <tr>
                     <td>@product.Code</td>
                     <td>@product.Name</td>
+                    <td>@product.ProductCategory.Name@(product.ProductCategory.IsDeleted ? " (deleted)" : string.Empty)</td>
                     <td>@product.Uom.Name@(product.Uom.IsDeleted ? " (deleted)" : string.Empty)</td>
                     <td class="text-end">
                         <a asp-action="Edit" asp-route-id="@product.Id" class="btn btn-sm btn-outline-primary">Edit</a>
