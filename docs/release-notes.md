@@ -1,5 +1,12 @@
 # Release Notes
 
+## Unreleased — Product Category Dictionary
+
+### Added
+- Audited product category dictionary with required name (maximum 255 characters) and one-character prefix.
+- Case-insensitive unique names and prefixes, logical deletion, and role-based authorization.
+- `ProductCategoryDictionary` EF Core migration (not applied automatically).
+
 ## Unreleased — Products Dictionary
 
 ### Added

@@ -1,0 +1,12 @@
+@model ProductCategory
+
+<div class="mb-3">
+    <label asp-for="Name" class="form-label"></label>
+    <input asp-for="Name" class="form-control" maxlength="255" />
+    <span asp-validation-for="Name" class="text-danger"></span>
+</div>
+<div class="mb-3">
+    <label asp-for="Prefix" class="form-label"></label>
+    <input asp-for="Prefix" class="form-control" maxlength="1" />
+    <span asp-validation-for="Prefix" class="text-danger"></span>
+</div>
