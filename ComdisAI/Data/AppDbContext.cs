@@ -14,6 +14,7 @@ public class AppDbContext(
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
     public DbSet<Status> Statuses => Set<Status>();
+    public DbSet<Tax> Taxes => Set<Tax>();
     public DbSet<Uom> Uoms => Set<Uom>();
     public DbSet<Bank> Banks => Set<Bank>();
     public DbSet<Actions> Actions => Set<Actions>();
@@ -66,6 +67,22 @@ public class AppDbContext(
                 .IsUnique()
                 .HasDatabaseName("IX_Statuses_NormalizedEntity_NormalizedName");
             entity.HasQueryFilter(status => !status.IsDeleted);
+        });
+        modelBuilder.Entity<Tax>(entity =>
+        {
+            entity.Property(tax => tax.Name)
+                .HasMaxLength(255)
+                .IsRequired();
+            entity.Property(tax => tax.Value)
+                .HasPrecision(18, 4)
+                .IsRequired();
+            entity.Property<string>("NormalizedName")
+                .HasMaxLength(255)
+                .IsRequired();
+            entity.HasIndex("NormalizedName")
+                .IsUnique()
+                .HasDatabaseName("IX_Taxes_NormalizedName");
+            entity.HasQueryFilter(tax => !tax.IsDeleted);
         });
         modelBuilder.Entity<Product>(entity =>
         {
@@ -293,6 +310,11 @@ public class AppDbContext(
                     status.DeletedAtUtc = now;
                     status.DeletedBy = actor;
                 }
+                else if (entry.Entity is Tax { IsDeleted: true, DeletedAtUtc: null } tax)
+                {
+                    tax.DeletedAtUtc = now;
+                    tax.DeletedBy = actor;
+                }
                 else if (entry.Entity is Product { IsDeleted: true, DeletedAtUtc: null } product)
                 {
                     product.DeletedAtUtc = now;
@@ -300,7 +322,7 @@ public class AppDbContext(
                 }
             }
             else if (entry.State == EntityState.Deleted &&
-                     entry.Entity is Customer or Product or ProductCategory or Status or Uom or Bank or ComdisAI.Models.Actions or Role or User)
+                     entry.Entity is Customer or Product or ProductCategory or Status or Tax or Uom or Bank or ComdisAI.Models.Actions or Role or User)
             {
                 var entity = entry.Entity;
                 switch (entity)
@@ -324,6 +346,11 @@ public class AppDbContext(
                         status.IsDeleted = true;
                         status.DeletedAtUtc = now;
                         status.DeletedBy = actor;
+                        break;
+                    case Tax tax:
+                        tax.IsDeleted = true;
+                        tax.DeletedAtUtc = now;
+                        tax.DeletedBy = actor;
                         break;
                     case Uom uom:
                         uom.IsDeleted = true;
@@ -385,5 +412,7 @@ public class AppDbContext(
             Entry(status).Property<string>("NormalizedName").CurrentValue = status.Name.Trim().ToUpperInvariant();
             Entry(status).Property<string>("NormalizedEntity").CurrentValue = status.Entity.Trim().ToUpperInvariant();
         }
+        else if (entity is Tax tax)
+            Entry(tax).Property<string>("NormalizedName").CurrentValue = tax.Name.Trim().ToUpperInvariant();
     }
 }

@@ -1,0 +1,42 @@
+@model IReadOnlyList<Tax>
+
+@{
+    ViewData["Title"] = "Tax";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Tax</h1>
+    <a asp-action="Create" class="btn btn-primary">Add Tax</a>
+</div>
+
+@if (Model.Count == 0)
+{
+    <p>No taxes have been added yet.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Value</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var tax in Model)
+            {
+                <tr>
+                    <td>@tax.Name</td>
+                    <td>@tax.Value.ToString("0.0000")</td>
+                    <td class="text-end">
+                        <a asp-action="Edit" asp-route-id="@tax.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                        <form asp-action="Delete" asp-route-id="@tax.Id" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

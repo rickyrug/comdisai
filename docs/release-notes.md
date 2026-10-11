@@ -7,6 +7,14 @@
 - Status list, create, edit, and logical delete screens under Catalogs → Configuration → Status, with role-based authorization.
 - `StatusDictionary` EF Core migration (not applied automatically).
 
+## Unreleased — Tax Dictionary
+
+### Added
+- Audited Tax dictionary with required name (maximum 255 characters) and decimal value (18,4).
+- Case-insensitive unique Tax names, logical deletion, and role-based authorization.
+- Tax list, create, edit, and delete screens under Catalogs → Configuration → Tax.
+- `TaxDictionary` EF Core migration (not applied automatically).
+
 ## Unreleased — Product Category on Products
 
 ### Added
