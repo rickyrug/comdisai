@@ -19,7 +19,7 @@ else
         <thead>
             <tr>
                 <th>Name</th>
-                <th>Value</th>
+                <th>Value (fraction / percent)</th>
                 <th></th>
             </tr>
         </thead>
@@ -28,7 +28,7 @@ else
             {
                 <tr>
                     <td>@tax.Name</td>
-                    <td>@tax.Value.ToString("0.0000")</td>
+                    <td>@tax.Value.ToString("0.0000") (@((tax.Value * 100m).ToString("0.####"))%)</td>
                     <td class="text-end">
                         <a asp-action="Edit" asp-route-id="@tax.Id" class="btn btn-sm btn-outline-primary">Edit</a>
                         <form asp-action="Delete" asp-route-id="@tax.Id" method="post" class="d-inline">

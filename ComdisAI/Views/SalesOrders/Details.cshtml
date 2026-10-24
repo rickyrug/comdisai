@@ -1,0 +1,78 @@
+@model SalesOrderHeader
+@{
+    ViewData["Title"] = $"Sales Order {Model.OrderNumber}";
+}
+
+<h1>Sales Order @Model.OrderNumber</h1>
+@if (TempData["Success"] is string success)
+{
+    <div class="alert alert-success">@success</div>
+}
+@if (TempData["Error"] is string error)
+{
+    <div class="alert alert-danger">@error</div>
+}
+<dl class="row">
+    <dt class="col-sm-3">Customer</dt>
+    <dd class="col-sm-9">@Model.Customer.Name</dd>
+    <dt class="col-sm-3">Delivery address</dt>
+    <dd class="col-sm-9">@Model.DeliveryAddress</dd>
+    <dt class="col-sm-3">Delivery date</dt>
+    <dd class="col-sm-9">@Model.DeliveryDate.ToString("yyyy-MM-dd")</dd>
+    <dt class="col-sm-3">Status</dt>
+    <dd class="col-sm-9">@Model.Status.Name</dd>
+    <dt class="col-sm-3">Tax</dt>
+    <dd class="col-sm-9">@Model.Tax.Name (@((Model.Tax.Value * 100m).ToString("0.####"))%)</dd>
+</dl>
+
+<h2 class="h4">Products</h2>
+<table class="table table-striped">
+    <thead>
+        <tr><th>Product</th><th class="text-end">Quantity</th><th class="text-end">Price</th><th class="text-end">Discount</th><th class="text-end">Subtotal</th></tr>
+    </thead>
+    <tbody>
+        @foreach (var detail in Model.Details)
+        {
+            <tr>
+                <td>@detail.Product.Code - @detail.Product.Name</td>
+                <td class="text-end">@detail.Qty.ToString("0.0000")</td>
+                <td class="text-end">@detail.Price.ToString("0.0000")</td>
+                <td class="text-end">@((detail.DiscountPercent ?? 0m).ToString("0.####"))%</td>
+                <td class="text-end">@detail.SubTotal.ToString("0.0000")</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<dl class="row">
+    <dt class="col-sm-9 text-end">Subtotal</dt>
+    <dd class="col-sm-3 text-end">@Model.Subtotal.ToString("0.0000")</dd>
+    <dt class="col-sm-9 text-end">Tax amount</dt>
+    <dd class="col-sm-3 text-end">@Model.TaxAmount.ToString("0.0000")</dd>
+    <dt class="col-sm-9 text-end">Total</dt>
+    <dd class="col-sm-3 text-end"><strong>@Model.Total.ToString("0.0000")</strong></dd>
+</dl>
+
+<div class="d-flex flex-wrap gap-2">
+    @if (ViewData["CanEdit"] is true)
+    {
+        <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model.Id">Edit</a>
+    }
+    @if (ViewData["CanApprove"] is true)
+    {
+        <form asp-action="Approve" asp-route-id="@Model.Id" method="post">
+            <button type="submit" class="btn btn-success">Approve</button>
+        </form>
+    }
+    @if (ViewData["CanDeliver"] is true)
+    {
+        <form asp-action="Deliver" asp-route-id="@Model.Id" method="post">
+            <button type="submit" class="btn btn-success">Mark delivered</button>
+        </form>
+    }
+    @if (ViewData["CanPrint"] is true)
+    {
+        <a class="btn btn-outline-secondary" asp-action="Print" asp-route-id="@Model.Id">Download PDF (3 copies)</a>
+    }
+    <a class="btn btn-secondary" asp-action="Index">Back to list</a>
+</div>
