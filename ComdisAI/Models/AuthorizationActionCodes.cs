@@ -47,4 +47,11 @@ public static class AuthorizationActionCodes
     public const string DeleteUser = "DELETE_USER";
     public const string AssignUserRoles = "ASSIGN_USER_ROLES";
     public const string ResetUserPassword = "RESET_USER_PASSWORD";
+    public const string ViewSalesOrder = "VIEW_SALES_ORDER";
+    public const string CreateSalesOrder = "CREATE_SALES_ORDER";
+    public const string EditSalesOrder = "EDIT_SALES_ORDER";
+    public const string ApproveSalesOrder = "APPROVE_SALES_ORDER";
+    public const string PrintSalesOrder = "PRINT_SALES_ORDER";
+    public const string DeliverSalesOrder = "DELIVER_SALES_ORDER";
+    public const string EditDeliveredSalesOrder = "EDIT_DELIVERED_SALES_ORDER";
 }

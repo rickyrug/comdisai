@@ -55,7 +55,14 @@ public static class AuthorizationSeeder
         (AuthorizationActionCodes.EditUser, "Edit users"),
         (AuthorizationActionCodes.DeleteUser, "Delete users"),
         (AuthorizationActionCodes.AssignUserRoles, "Assign user roles"),
-        (AuthorizationActionCodes.ResetUserPassword, "Reset user passwords")
+        (AuthorizationActionCodes.ResetUserPassword, "Reset user passwords"),
+        (AuthorizationActionCodes.ViewSalesOrder, "View sales orders"),
+        (AuthorizationActionCodes.CreateSalesOrder, "Create sales orders"),
+        (AuthorizationActionCodes.EditSalesOrder, "Edit sales orders"),
+        (AuthorizationActionCodes.ApproveSalesOrder, "Approve sales orders"),
+        (AuthorizationActionCodes.PrintSalesOrder, "Print sales order documents"),
+        (AuthorizationActionCodes.DeliverSalesOrder, "Mark sales orders as delivered"),
+        (AuthorizationActionCodes.EditDeliveredSalesOrder, "Edit delivered sales orders")
     ];
 
     public static async Task SeedAsync(

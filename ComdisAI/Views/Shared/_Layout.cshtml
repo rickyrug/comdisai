@@ -26,6 +26,7 @@
     var canViewStatuses = grantedActions.Contains(AuthorizationActionCodes.ViewStatus);
     var canViewTaxes = grantedActions.Contains(AuthorizationActionCodes.ViewTax);
     var canViewCustomers = grantedActions.Contains(AuthorizationActionCodes.ViewCustomer);
+    var canViewSalesOrders = grantedActions.Contains(AuthorizationActionCodes.ViewSalesOrder);
     var canViewActions = grantedActions.Contains(AuthorizationActionCodes.ViewAction);
     var canViewRoles = grantedActions.Contains(AuthorizationActionCodes.ViewRole);
     var canViewUsers = grantedActions.Contains(AuthorizationActionCodes.ViewUser);
@@ -122,16 +123,25 @@
                                 </ul>
                             </li>
                         }
-                        @if (canViewCustomers)
+                        @if (canViewCustomers || canViewSalesOrders)
                         {
                             <li class="nav-item dropdown">
                                 <button class="nav-link dropdown-toggle text-dark" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     Sales
                                 </button>
                                 <ul class="dropdown-menu">
-                                    <li>
-                                        <a class="dropdown-item" asp-controller="Customers" asp-action="Index">Customers</a>
-                                    </li>
+                                    @if (canViewCustomers)
+                                    {
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Customers" asp-action="Index">Customers</a>
+                                        </li>
+                                    }
+                                    @if (canViewSalesOrders)
+                                    {
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="SalesOrders" asp-action="Index">Sales Orders</a>
+                                        </li>
+                                    }
                                 </ul>
                             </li>
                         }

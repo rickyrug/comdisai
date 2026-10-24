@@ -1,0 +1,156 @@
+@model SalesOrderEditViewModel
+@{
+    ViewData["Title"] = $"Edit {Model.OrderNumber}";
+}
+
+<h1>Edit sales order @Model.OrderNumber</h1>
+<p>Current status: <strong>@Model.StatusName</strong>. Saving changes to a non-delivered order returns it to Draft. Privileged edits to a Delivered order leave it Delivered.</p>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="OrderNumber" type="hidden" />
+    <input asp-for="StatusName" type="hidden" />
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+    <div class="mb-3">
+        <label asp-for="CustomerId" class="form-label">Customer</label>
+        <select asp-for="CustomerId" asp-items="Model.Customers" class="form-select">
+            <option value="">Select a customer</option>
+        </select>
+        <span asp-validation-for="CustomerId" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="DeliveryAddress" class="form-label"></label>
+        <textarea asp-for="DeliveryAddress" class="form-control" maxlength="359"></textarea>
+        <span asp-validation-for="DeliveryAddress" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="DeliveryDate" class="form-label"></label>
+        <input asp-for="DeliveryDate" asp-format="{0:yyyy-MM-dd}" type="date" class="form-control" />
+        <span asp-validation-for="DeliveryDate" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="TaxId" class="form-label">Tax</label>
+        <select asp-for="TaxId" asp-items="Model.Taxes" class="form-select">
+            <option value="">Select a tax</option>
+        </select>
+        <span asp-validation-for="TaxId" class="text-danger"></span>
+    </div>
+    <fieldset class="mb-3">
+        <legend class="fs-6">Header discounts (%)</legend>
+        <div class="row">
+            <div class="col-md-4 mb-2">
+                <label asp-for="DiscountPercent1" class="form-label">Discount 1</label>
+                <input asp-for="DiscountPercent1" class="form-control" type="number" min="0" max="100" step="0.0001" />
+                <span asp-validation-for="DiscountPercent1" class="text-danger"></span>
+            </div>
+            <div class="col-md-4 mb-2">
+                <label asp-for="DiscountPercent2" class="form-label">Discount 2</label>
+                <input asp-for="DiscountPercent2" class="form-control" type="number" min="0" max="100" step="0.0001" />
+                <span asp-validation-for="DiscountPercent2" class="text-danger"></span>
+            </div>
+            <div class="col-md-4 mb-2">
+                <label asp-for="DiscountPercent3" class="form-label">Discount 3</label>
+                <input asp-for="DiscountPercent3" class="form-control" type="number" min="0" max="100" step="0.0001" />
+                <span asp-validation-for="DiscountPercent3" class="text-danger"></span>
+            </div>
+        </div>
+    </fieldset>
+
+    <h2 class="h4 mt-4">Products</h2>
+    <div asp-validation-for="Details" class="text-danger"></div>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Discount (%)</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="sales-order-details">
+                @for (var index = 0; index < Model.Details.Count; index++)
+                {
+                    var detail = Model.Details[index];
+                    <tr data-detail-row>
+                        <td>
+                            <input name="Details[@index].Id" value="@detail.Id" type="hidden" />
+                            <select name="Details[@index].ProductId" class="form-select" required>
+                                <option value="">Select a product</option>
+                                @foreach (var product in Model.Products)
+                                {
+                                    <option value="@product.Value" selected="@(detail.ProductId.ToString() == product.Value)">@product.Text</option>
+                                }
+                            </select>
+                        </td>
+                        <td><input name="Details[@index].Qty" value="@detail.Qty.ToString("0.0000", System.Globalization.CultureInfo.InvariantCulture)" type="number" min="0.0001" step="0.0001" class="form-control" required /></td>
+                        <td><input name="Details[@index].Price" value="@detail.Price.ToString("0.0000", System.Globalization.CultureInfo.InvariantCulture)" type="number" min="0" step="0.0001" class="form-control" required /></td>
+                        <td><input name="Details[@index].DiscountPercent" value="@detail.DiscountPercent?.ToString("0.0000", System.Globalization.CultureInfo.InvariantCulture)" type="number" min="0" max="100" step="0.0001" class="form-control" /></td>
+                        <td><button type="button" class="btn btn-outline-danger" data-remove-detail>Remove</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <button type="button" id="add-detail" class="btn btn-outline-primary mb-3">Add product</button>
+    <template id="detail-template">
+        <tr data-detail-row>
+            <td>
+                <input name="Details[__INDEX__].Id" type="hidden" />
+                <select name="Details[__INDEX__].ProductId" class="form-select" required>
+                    <option value="">Select a product</option>
+                    @foreach (var product in Model.Products)
+                    {
+                        <option value="@product.Value">@product.Text</option>
+                    }
+                </select>
+            </td>
+            <td><input name="Details[__INDEX__].Qty" type="number" min="0.0001" step="0.0001" value="1" class="form-control" required /></td>
+            <td><input name="Details[__INDEX__].Price" type="number" min="0" step="0.0001" value="0" class="form-control" required /></td>
+            <td><input name="Details[__INDEX__].DiscountPercent" type="number" min="0" max="100" step="0.0001" class="form-control" /></td>
+            <td><button type="button" class="btn btn-outline-danger" data-remove-detail>Remove</button></td>
+        </tr>
+    </template>
+
+    <div class="border rounded p-3 mb-3">
+        <div>Subtotal: <strong>@Model.Subtotal.ToString("0.0000")</strong></div>
+        <div>Tax: <strong>@Model.TaxAmount.ToString("0.0000")</strong></div>
+        <div>Total: <strong>@Model.Total.ToString("0.0000")</strong></div>
+        <small class="text-muted">Totals are recalculated on save.</small>
+    </div>
+    <button type="submit" class="btn btn-primary">Save order</button>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const body = document.getElementById("sales-order-details");
+            const template = document.getElementById("detail-template");
+
+            function reindexRows() {
+                body.querySelectorAll("[data-detail-row]").forEach((row, index) => {
+                    row.querySelectorAll("[name]").forEach(input => {
+                        input.name = input.name.replace(/Details\[\d+\]/, `Details[${index}]`);
+                    });
+                });
+            }
+
+            document.getElementById("add-detail").addEventListener("click", () => {
+                const index = body.querySelectorAll("[data-detail-row]").length;
+                const wrapper = document.createElement("tbody");
+                wrapper.innerHTML = template.innerHTML.replaceAll("__INDEX__", index);
+                body.appendChild(wrapper.firstElementChild);
+            });
+
+            body.addEventListener("click", event => {
+                if (event.target.closest("[data-remove-detail]")) {
+                    event.target.closest("[data-detail-row]").remove();
+                    reindexRows();
+                }
+            });
+        })();
+    </script>
+}
