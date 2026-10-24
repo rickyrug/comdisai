@@ -1,0 +1,42 @@
+@model IReadOnlyList<Status>
+
+@{
+    ViewData["Title"] = "Status";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Status</h1>
+    <a asp-action="Create" class="btn btn-primary">Add Status</a>
+</div>
+
+@if (Model.Count == 0)
+{
+    <p>No statuses have been added yet.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Entity</th>
+                <th>Name</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var status in Model)
+            {
+                <tr>
+                    <td>@status.Entity</td>
+                    <td>@status.Name</td>
+                    <td class="text-end">
+                        <a asp-action="Edit" asp-route-id="@status.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                        <form asp-action="Delete" asp-route-id="@status.Id" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

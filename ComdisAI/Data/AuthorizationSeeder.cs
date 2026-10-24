@@ -17,6 +17,22 @@ public static class AuthorizationSeeder
         (AuthorizationActionCodes.CreateCustomer, "Create customers"),
         (AuthorizationActionCodes.EditCustomer, "Edit customers"),
         (AuthorizationActionCodes.DeleteCustomer, "Delete customers"),
+        (AuthorizationActionCodes.ViewProduct, "View products"),
+        (AuthorizationActionCodes.CreateProduct, "Create products"),
+        (AuthorizationActionCodes.EditProduct, "Edit products"),
+        (AuthorizationActionCodes.DeleteProduct, "Delete products"),
+        (AuthorizationActionCodes.ViewProductCategory, "View product categories"),
+        (AuthorizationActionCodes.CreateProductCategory, "Create product categories"),
+        (AuthorizationActionCodes.EditProductCategory, "Edit product categories"),
+        (AuthorizationActionCodes.DeleteProductCategory, "Delete product categories"),
+        (AuthorizationActionCodes.ViewStatus, "View statuses"),
+        (AuthorizationActionCodes.CreateStatus, "Create statuses"),
+        (AuthorizationActionCodes.EditStatus, "Edit statuses"),
+        (AuthorizationActionCodes.DeleteStatus, "Delete statuses"),
+        (AuthorizationActionCodes.ViewTax, "View taxes"),
+        (AuthorizationActionCodes.CreateTax, "Create taxes"),
+        (AuthorizationActionCodes.EditTax, "Edit taxes"),
+        (AuthorizationActionCodes.DeleteTax, "Delete taxes"),
         (AuthorizationActionCodes.ViewUom, "View units of measure"),
         (AuthorizationActionCodes.CreateUom, "Create units of measure"),
         (AuthorizationActionCodes.EditUom, "Edit units of measure"),
@@ -39,7 +55,14 @@ public static class AuthorizationSeeder
         (AuthorizationActionCodes.EditUser, "Edit users"),
         (AuthorizationActionCodes.DeleteUser, "Delete users"),
         (AuthorizationActionCodes.AssignUserRoles, "Assign user roles"),
-        (AuthorizationActionCodes.ResetUserPassword, "Reset user passwords")
+        (AuthorizationActionCodes.ResetUserPassword, "Reset user passwords"),
+        (AuthorizationActionCodes.ViewSalesOrder, "View sales orders"),
+        (AuthorizationActionCodes.CreateSalesOrder, "Create sales orders"),
+        (AuthorizationActionCodes.EditSalesOrder, "Edit sales orders"),
+        (AuthorizationActionCodes.ApproveSalesOrder, "Approve sales orders"),
+        (AuthorizationActionCodes.PrintSalesOrder, "Print sales order documents"),
+        (AuthorizationActionCodes.DeliverSalesOrder, "Mark sales orders as delivered"),
+        (AuthorizationActionCodes.EditDeliveredSalesOrder, "Edit delivered sales orders")
     ];
 
     public static async Task SeedAsync(

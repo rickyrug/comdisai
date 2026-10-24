@@ -1,5 +1,51 @@
 # Release Notes
 
+## Unreleased — Status Dictionary
+
+### Added
+- Audited Status dictionary with required Entity (maximum 20 characters) and Name (maximum 255 characters), unique case-insensitively per entity.
+- Status list, create, edit, and logical delete screens under Catalogs → Configuration → Status, with role-based authorization.
+- `StatusDictionary` EF Core migration (not applied automatically).
+
+## Unreleased — Tax Dictionary
+
+### Added
+- Audited Tax dictionary with required name (maximum 255 characters) and decimal value (18,4).
+- Case-insensitive unique Tax names, logical deletion, and role-based authorization.
+- Tax list, create, edit, and delete screens under Catalogs → Configuration → Tax.
+- `TaxDictionary` EF Core migration (not applied automatically).
+
+## Unreleased — Product Category on Products
+
+### Added
+- Required product category (FK to `ProductCategories`, column `ProductCategory`) on products, selectable in the form, shown and searchable in the listing.
+- `ProductCategoryOnProducts` EF Core migration (not applied automatically; assumes the Products table is empty). Apply with `dotnet ef database update --project ComdisAI`.
+
+### Changed
+- Product code is now `{category prefix}{number}`: the user enters 1–4 digits, left-padded with zeros to 4 (e.g. prefix `A` + `7` = `A0007`). The unique code check applies to the final code; changing the category or number recomputes it.
+
+## Unreleased — Product Category Dictionary
+
+### Added
+- Audited product category dictionary with required name (maximum 255 characters) and one-character prefix.
+- Case-insensitive unique names and prefixes, logical deletion, and role-based authorization.
+- `ProductCategoryDictionary` EF Core migration (not applied automatically).
+
+## Unreleased — Products Dictionary
+
+### Added
+- Product dictionary MVC screens with searchable listing, create, edit, and logical delete.
+- Required product name (maximum 255 characters), case-insensitive unique five-character product code (shorter input is left-padded with zeros), and required unit-of-measure relationship.
+- Product audit and logical-delete metadata, active-product query filtering, and authorization actions/navigation.
+- `ProductsDictionary` EF Core migration (not applied automatically).
+
+## Unreleased — Application Menu
+
+### Changed
+- Reorganized the shared top navigation into Catalogs, Sales, and Administrator > Security dropdowns.
+- Navigation destinations and their parent menus are shown according to the selected active role's view permissions.
+- Kept the menu responsive for mobile use and retained the existing account and role controls.
+
 ## Unreleased — Authorization Layer
 
 ### Added

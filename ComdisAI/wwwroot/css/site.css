@@ -29,3 +29,20 @@ body {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
 }
+
+.dropdown-submenu {
+  position: relative;
+}
+
+.dropdown-submenu > .dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: 0;
+}
+
+@media (max-width: 575.98px) {
+  .dropdown-submenu > .dropdown-menu {
+    position: static;
+    margin-left: 1rem;
+  }
+}

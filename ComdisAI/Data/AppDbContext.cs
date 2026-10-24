@@ -10,8 +10,12 @@ public class AppDbContext(
     IHttpContextAccessor httpContextAccessor) : DbContext(options)
 {
     public DbSet<Product> Products => Set<Product>();
-    public DbSet<Order> Orders => Set<Order>();
+    public DbSet<SalesOrderHeader> SalesOrderHeaders => Set<SalesOrderHeader>();
+    public DbSet<SalesOrderDetail> SalesOrderDetails => Set<SalesOrderDetail>();
     public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
+    public DbSet<Status> Statuses => Set<Status>();
+    public DbSet<Tax> Taxes => Set<Tax>();
     public DbSet<Uom> Uoms => Set<Uom>();
     public DbSet<Bank> Banks => Set<Bank>();
     public DbSet<Actions> Actions => Set<Actions>();
@@ -24,6 +28,135 @@ public class AppDbContext(
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.Entity<Customer>().HasQueryFilter(customer => !customer.IsDeleted);
+        modelBuilder.Entity<ProductCategory>(entity =>
+        {
+            entity.Property(category => category.Name)
+                .HasMaxLength(255)
+                .IsRequired();
+            entity.Property(category => category.Prefix)
+                .HasMaxLength(1)
+                .IsRequired();
+            entity.Property<string>("NormalizedName")
+                .HasMaxLength(255)
+                .IsRequired();
+            entity.Property<string>("NormalizedPrefix")
+                .HasMaxLength(1)
+                .IsRequired();
+            entity.HasIndex("NormalizedName")
+                .IsUnique()
+                .HasDatabaseName("IX_ProductCategories_NormalizedName");
+            entity.HasIndex("NormalizedPrefix")
+                .IsUnique()
+                .HasDatabaseName("IX_ProductCategories_NormalizedPrefix");
+            entity.HasQueryFilter(category => !category.IsDeleted);
+        });
+        modelBuilder.Entity<Status>(entity =>
+        {
+            entity.Property(status => status.Name)
+                .HasMaxLength(255)
+                .IsRequired();
+            entity.Property(status => status.Entity)
+                .HasMaxLength(20)
+                .IsRequired();
+            entity.Property<string>("NormalizedName")
+                .HasMaxLength(255)
+                .IsRequired();
+            entity.Property<string>("NormalizedEntity")
+                .HasMaxLength(20)
+                .IsRequired();
+            entity.HasIndex("NormalizedEntity", "NormalizedName")
+                .IsUnique()
+                .HasDatabaseName("IX_Statuses_NormalizedEntity_NormalizedName");
+            entity.HasQueryFilter(status => !status.IsDeleted);
+        });
+        modelBuilder.Entity<Tax>(entity =>
+        {
+            entity.Property(tax => tax.Name)
+                .HasMaxLength(255)
+                .IsRequired();
+            entity.Property(tax => tax.Value)
+                .HasPrecision(18, 4)
+                .IsRequired();
+            entity.Property<string>("NormalizedName")
+                .HasMaxLength(255)
+                .IsRequired();
+            entity.HasIndex("NormalizedName")
+                .IsUnique()
+                .HasDatabaseName("IX_Taxes_NormalizedName");
+            entity.HasQueryFilter(tax => !tax.IsDeleted);
+        });
+        modelBuilder.Entity<Product>(entity =>
+        {
+            entity.Property(product => product.Name)
+                .HasMaxLength(255)
+                .IsRequired();
+            entity.Property(product => product.Code)
+                .HasMaxLength(5)
+                .IsRequired();
+            entity.Property(product => product.UomId)
+                .HasColumnName("Uom");
+            entity.Property<string>("NormalizedCode")
+                .HasMaxLength(5)
+                .IsRequired();
+            entity.HasIndex("NormalizedCode")
+                .IsUnique()
+                .HasDatabaseName("IX_Products_NormalizedCode");
+            entity.HasQueryFilter(product => !product.IsDeleted);
+            entity.HasOne(product => product.Uom)
+                .WithMany()
+                .HasForeignKey(product => product.UomId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.Property(product => product.ProductCategoryId)
+                .HasColumnName("ProductCategory");
+            entity.HasOne(product => product.ProductCategory)
+                .WithMany()
+                .HasForeignKey(product => product.ProductCategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<SalesOrderHeader>(entity =>
+        {
+            entity.Property(header => header.OrderNumber)
+                .HasMaxLength(10)
+                .IsRequired();
+            entity.HasIndex(header => header.OrderNumber)
+                .IsUnique();
+            entity.Property(header => header.DeliveryAddress)
+                .HasMaxLength(359)
+                .IsRequired();
+            entity.Property(header => header.DiscountPercent1).HasPrecision(18, 4);
+            entity.Property(header => header.DiscountPercent2).HasPrecision(18, 4);
+            entity.Property(header => header.DiscountPercent3).HasPrecision(18, 4);
+            entity.Property(header => header.Subtotal).HasPrecision(18, 4);
+            entity.Property(header => header.TaxAmount).HasPrecision(18, 4);
+            entity.Property(header => header.Total).HasPrecision(18, 4);
+            entity.HasOne(header => header.Customer)
+                .WithMany()
+                .HasForeignKey(header => header.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(header => header.Status)
+                .WithMany()
+                .HasForeignKey(header => header.StatusId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(header => header.Tax)
+                .WithMany()
+                .HasForeignKey(header => header.TaxId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<SalesOrderDetail>(entity =>
+        {
+            entity.Property(detail => detail.DiscountPercent).HasPrecision(18, 4);
+            entity.Property(detail => detail.Qty).HasPrecision(18, 4);
+            entity.Property(detail => detail.Price).HasPrecision(18, 4);
+            entity.Property(detail => detail.SubTotal).HasPrecision(18, 4);
+            entity.HasOne(detail => detail.SalesOrderHeader)
+                .WithMany(header => header.Details)
+                .HasForeignKey(detail => detail.SalesOrderHeaderId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(detail => detail.Product)
+                .WithMany()
+                .HasForeignKey(detail => detail.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
         modelBuilder.Entity<Uom>(entity =>
         {
             entity.Property(uom => uom.Name)
@@ -212,9 +345,29 @@ public class AppDbContext(
                     deletedUser.DeletedAtUtc = now;
                     deletedUser.DeletedBy = actor;
                 }
+                else if (entry.Entity is ProductCategory { IsDeleted: true, DeletedAtUtc: null } category)
+                {
+                    category.DeletedAtUtc = now;
+                    category.DeletedBy = actor;
+                }
+                else if (entry.Entity is Status { IsDeleted: true, DeletedAtUtc: null } status)
+                {
+                    status.DeletedAtUtc = now;
+                    status.DeletedBy = actor;
+                }
+                else if (entry.Entity is Tax { IsDeleted: true, DeletedAtUtc: null } tax)
+                {
+                    tax.DeletedAtUtc = now;
+                    tax.DeletedBy = actor;
+                }
+                else if (entry.Entity is Product { IsDeleted: true, DeletedAtUtc: null } product)
+                {
+                    product.DeletedAtUtc = now;
+                    product.DeletedBy = actor;
+                }
             }
             else if (entry.State == EntityState.Deleted &&
-                     entry.Entity is Customer or Uom or Bank or ComdisAI.Models.Actions or Role or User)
+                     entry.Entity is Customer or Product or ProductCategory or Status or Tax or Uom or Bank or ComdisAI.Models.Actions or Role or User)
             {
                 var entity = entry.Entity;
                 switch (entity)
@@ -223,6 +376,26 @@ public class AppDbContext(
                         customer.IsDeleted = true;
                         customer.DeletedAtUtc = now;
                         customer.DeletedBy = actor;
+                        break;
+                    case Product product:
+                        product.IsDeleted = true;
+                        product.DeletedAtUtc = now;
+                        product.DeletedBy = actor;
+                        break;
+                    case ProductCategory category:
+                        category.IsDeleted = true;
+                        category.DeletedAtUtc = now;
+                        category.DeletedBy = actor;
+                        break;
+                    case Status status:
+                        status.IsDeleted = true;
+                        status.DeletedAtUtc = now;
+                        status.DeletedBy = actor;
+                        break;
+                    case Tax tax:
+                        tax.IsDeleted = true;
+                        tax.DeletedAtUtc = now;
+                        tax.DeletedBy = actor;
                         break;
                     case Uom uom:
                         uom.IsDeleted = true;
@@ -272,5 +445,19 @@ public class AppDbContext(
             Entry(role).Property<string>("NormalizedCode").CurrentValue = role.Code.Trim().ToUpperInvariant();
         else if (entity is User user)
             Entry(user).Property<string>("NormalizedEmail").CurrentValue = User.NormalizeEmail(user.Email);
+        else if (entity is Product product)
+            Entry(product).Property<string>("NormalizedCode").CurrentValue = product.Code.Trim().ToUpperInvariant();
+        else if (entity is ProductCategory category)
+        {
+            Entry(category).Property<string>("NormalizedName").CurrentValue = category.Name.Trim().ToUpperInvariant();
+            Entry(category).Property<string>("NormalizedPrefix").CurrentValue = category.Prefix.Trim().ToUpperInvariant();
+        }
+        else if (entity is Status status)
+        {
+            Entry(status).Property<string>("NormalizedName").CurrentValue = status.Name.Trim().ToUpperInvariant();
+            Entry(status).Property<string>("NormalizedEntity").CurrentValue = status.Entity.Trim().ToUpperInvariant();
+        }
+        else if (entity is Tax tax)
+            Entry(tax).Property<string>("NormalizedName").CurrentValue = tax.Name.Trim().ToUpperInvariant();
     }
 }

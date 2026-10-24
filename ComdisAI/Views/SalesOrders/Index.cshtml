@@ -1,0 +1,47 @@
+@model IReadOnlyList<SalesOrderHeader>
+@{
+    ViewData["Title"] = "Sales Orders";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Sales Orders</h1>
+    @if (ViewData["CanCreate"] is true)
+    {
+        <a class="btn btn-primary" asp-action="Create">New sales order</a>
+    }
+</div>
+
+@if (TempData["Success"] is string success)
+{
+    <div class="alert alert-success">@success</div>
+}
+@if (TempData["Error"] is string error)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Order</th>
+            <th>Customer</th>
+            <th>Delivery date</th>
+            <th>Status</th>
+            <th class="text-end">Total</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var order in Model)
+        {
+            <tr>
+                <td>@order.OrderNumber</td>
+                <td>@order.Customer.Name</td>
+                <td>@order.DeliveryDate.ToString("yyyy-MM-dd")</td>
+                <td>@order.Status.Name</td>
+                <td class="text-end">@order.Total.ToString("0.0000")</td>
+                <td><a asp-action="Details" asp-route-id="@order.Id">Open</a></td>
+            </tr>
+        }
+    </tbody>
+</table>

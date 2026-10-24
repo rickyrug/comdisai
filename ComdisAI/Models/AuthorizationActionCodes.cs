@@ -8,6 +8,22 @@ public static class AuthorizationActionCodes
     public const string CreateCustomer = "CREATE_CUSTOMER";
     public const string EditCustomer = "EDIT_CUSTOMER";
     public const string DeleteCustomer = "DELETE_CUSTOMER";
+    public const string ViewProduct = "VIEW_PRODUCT";
+    public const string CreateProduct = "CREATE_PRODUCT";
+    public const string EditProduct = "EDIT_PRODUCT";
+    public const string DeleteProduct = "DELETE_PRODUCT";
+    public const string ViewProductCategory = "VIEW_PRODUCT_CATEGORY";
+    public const string CreateProductCategory = "CREATE_PRODUCT_CATEGORY";
+    public const string EditProductCategory = "EDIT_PRODUCT_CATEGORY";
+    public const string DeleteProductCategory = "DELETE_PRODUCT_CATEGORY";
+    public const string ViewStatus = "VIEW_STATUS";
+    public const string CreateStatus = "CREATE_STATUS";
+    public const string EditStatus = "EDIT_STATUS";
+    public const string DeleteStatus = "DELETE_STATUS";
+    public const string ViewTax = "VIEW_TAX";
+    public const string CreateTax = "CREATE_TAX";
+    public const string EditTax = "EDIT_TAX";
+    public const string DeleteTax = "DELETE_TAX";
     public const string ViewUom = "VIEW_UOM";
     public const string CreateUom = "CREATE_UOM";
     public const string EditUom = "EDIT_UOM";
@@ -31,4 +47,11 @@ public static class AuthorizationActionCodes
     public const string DeleteUser = "DELETE_USER";
     public const string AssignUserRoles = "ASSIGN_USER_ROLES";
     public const string ResetUserPassword = "RESET_USER_PASSWORD";
+    public const string ViewSalesOrder = "VIEW_SALES_ORDER";
+    public const string CreateSalesOrder = "CREATE_SALES_ORDER";
+    public const string EditSalesOrder = "EDIT_SALES_ORDER";
+    public const string ApproveSalesOrder = "APPROVE_SALES_ORDER";
+    public const string PrintSalesOrder = "PRINT_SALES_ORDER";
+    public const string DeliverSalesOrder = "DELIVER_SALES_ORDER";
+    public const string EditDeliveredSalesOrder = "EDIT_DELIVERED_SALES_ORDER";
 }
