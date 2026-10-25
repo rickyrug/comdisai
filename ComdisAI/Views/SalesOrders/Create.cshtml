@@ -10,7 +10,7 @@
     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
     <div class="mb-3">
         <label asp-for="CustomerId" class="form-label">Customer</label>
-        <select asp-for="CustomerId" asp-items="Model.Customers" class="form-select">
+        <select asp-for="CustomerId" asp-items="Model.Customers" class="form-select" data-searchable="true">
             <option value="">Select a customer</option>
         </select>
         <span asp-validation-for="CustomerId" class="text-danger"></span>
@@ -58,6 +58,7 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/searchable-select.js" asp-append-version="true"></script>
     <script>
         (function () {
             const addresses = @Json.Serialize(Model.CustomerAddresses);
