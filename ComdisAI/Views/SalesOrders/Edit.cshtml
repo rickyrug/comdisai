@@ -76,7 +76,7 @@
                     <tr data-detail-row>
                         <td>
                             <input name="Details[@index].Id" value="@detail.Id" type="hidden" />
-                            <select name="Details[@index].ProductId" class="form-select" required>
+                            <select name="Details[@index].ProductId" class="form-select product-select" required>
                                 <option value="">Select a product</option>
                                 @foreach (var product in Model.Products)
                                 {
@@ -98,7 +98,7 @@
         <tr data-detail-row>
             <td>
                 <input name="Details[__INDEX__].Id" type="hidden" />
-                <select name="Details[__INDEX__].ProductId" class="form-select" required>
+                <select name="Details[__INDEX__].ProductId" class="form-select product-select" required>
                     <option value="">Select a product</option>
                     @foreach (var product in Model.Products)
                     {
@@ -131,6 +131,22 @@
             const body = document.getElementById("sales-order-details");
             const template = document.getElementById("detail-template");
 
+            function initProductSelect($select) {
+                $select.select2({
+                    theme: "bootstrap-5",
+                    width: "100%",
+                    placeholder: "Select a product",
+                    allowClear: true,
+                    language: { noResults: () => "No products found" }
+                });
+                $select.on("select2:open", () => {
+                    const field = document.querySelector(".select2-container--open .select2-search__field");
+                    if (field) field.focus();
+                });
+            }
+
+            $(body).find("select.product-select").each(function () { initProductSelect($(this)); });
+
             function reindexRows() {
                 body.querySelectorAll("[data-detail-row]").forEach((row, index) => {
                     row.querySelectorAll("[name]").forEach(input => {
@@ -143,7 +159,9 @@
                 const index = body.querySelectorAll("[data-detail-row]").length;
                 const wrapper = document.createElement("tbody");
                 wrapper.innerHTML = template.innerHTML.replaceAll("__INDEX__", index);
-                body.appendChild(wrapper.firstElementChild);
+                const row = wrapper.firstElementChild;
+                body.appendChild(row);
+                initProductSelect($(row).find("select.product-select"));
             });
 
             body.addEventListener("click", event => {
