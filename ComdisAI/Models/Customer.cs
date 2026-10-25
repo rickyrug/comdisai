@@ -18,6 +18,9 @@ public class Customer : AuditableEntity
     [StringLength(25)]
     public required string RFC { get; set; }
 
+    public int? DefaultTaxId { get; set; }
+    public Tax? DefaultTax { get; set; }
+
     public bool IsDeleted { get; set; }
     public DateTime? DeletedAtUtc { get; set; }
     public string? DeletedBy { get; set; }

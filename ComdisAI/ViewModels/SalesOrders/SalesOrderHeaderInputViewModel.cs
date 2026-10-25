@@ -29,5 +29,6 @@ public class SalesOrderHeaderInputViewModel
 
     public IReadOnlyList<SelectListItem> Customers { get; set; } = [];
     public IReadOnlyDictionary<string, string> CustomerAddresses { get; set; } = new Dictionary<string, string>();
+    public IReadOnlyDictionary<string, string> CustomerDefaultTaxes { get; set; } = new Dictionary<string, string>();
     public IReadOnlyList<SelectListItem> Taxes { get; set; } = [];
 }
