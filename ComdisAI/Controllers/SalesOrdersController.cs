@@ -384,6 +384,10 @@ public class SalesOrdersController(
             .Include(order => order.Tax)
             .Include(order => order.Details)
                 .ThenInclude(detail => detail.Product)
+                    .ThenInclude(product => product.ProductCategory)
+            .Include(order => order.Details)
+                .ThenInclude(detail => detail.Product)
+                    .ThenInclude(product => product.Uom)
             .SingleOrDefaultAsync(order => order.Id == id, cancellationToken);
 
     private async Task<bool> CanEditAsync(
