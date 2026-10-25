@@ -28,5 +28,6 @@ public class SalesOrderHeaderInputViewModel
     public decimal DiscountPercent3 { get; set; }
 
     public IReadOnlyList<SelectListItem> Customers { get; set; } = [];
+    public IReadOnlyDictionary<string, string> CustomerAddresses { get; set; } = new Dictionary<string, string>();
     public IReadOnlyList<SelectListItem> Taxes { get; set; } = [];
 }
