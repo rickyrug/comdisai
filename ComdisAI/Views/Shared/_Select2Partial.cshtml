@@ -1,0 +1,40 @@
+<link rel="stylesheet" href="~/lib/select2/select2.min.css" />
+<link rel="stylesheet" href="~/lib/select2/select2-bootstrap-5-theme.min.css" />
+<script src="~/lib/select2/select2.min.js"></script>
+<script>
+    (function () {
+        const dropdownTexts = { noResults: () => "No customers found" };
+
+        // Match the visible text (name) or the option value (customer ID).
+        function matcher(params, data) {
+            const term = (params.term || "").trim().toLowerCase();
+            if (term === "") return data;
+            if (!data.id) return null;
+            const text = (data.text || "").toLowerCase();
+            const id = String(data.id).toLowerCase();
+            return text.includes(term) || id === term || id.startsWith(term) ? data : null;
+        }
+
+        $("select[data-searchable]").each(function () {
+            const $select = $(this);
+            $select.select2({
+                theme: "bootstrap-5",
+                width: "100%",
+                matcher: matcher,
+                language: dropdownTexts,
+                placeholder: $select.find("option[value='']").text() || "Select",
+                allowClear: true
+            });
+
+            // Select2 raises jQuery-only change events; forward them to native listeners.
+            $select.on("select2:select select2:clear", function () {
+                this.dispatchEvent(new Event("change", { bubbles: true }));
+            });
+
+            $select.on("select2:open", function () {
+                const field = document.querySelector(".select2-container--open .select2-search__field");
+                if (field) field.focus();
+            });
+        });
+    })();
+</script>

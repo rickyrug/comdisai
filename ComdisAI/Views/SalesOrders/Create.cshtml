@@ -58,7 +58,7 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script src="~/js/searchable-select.js" asp-append-version="true"></script>
+    <partial name="_Select2Partial" />
     <script>
         (function () {
             const addresses = @Json.Serialize(Model.CustomerAddresses);
