@@ -170,6 +170,7 @@ public class SalesOrdersController(
 
         var model = MapToEditViewModel(order);
         await PopulateEditOptionsAsync(model, cancellationToken);
+        await PopulateStatusActionsAsync(order, cancellationToken);
         AddMissingStatusErrors(await GetRequiredStatusesAsync(cancellationToken));
         return View(model);
     }
@@ -239,6 +240,7 @@ public class SalesOrdersController(
             input.OrderNumber = order.OrderNumber;
             input.StatusName = order.Status.Name;
             await PopulateEditOptionsAsync(input, cancellationToken);
+            await PopulateStatusActionsAsync(order, cancellationToken);
             return View(input);
         }
 
@@ -289,6 +291,7 @@ public class SalesOrdersController(
             input.OrderNumber = order.OrderNumber;
             input.StatusName = order.Status.Name;
             await PopulateEditOptionsAsync(input, cancellationToken);
+            await PopulateStatusActionsAsync(order, cancellationToken);
             return View(input);
         }
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -424,6 +427,15 @@ public class SalesOrdersController(
                 tax.Name + " (" + (tax.Value * 100m).ToString("0.####", CultureInfo.InvariantCulture) + "%)",
                 tax.Id.ToString(CultureInfo.InvariantCulture)))
             .ToListAsync(cancellationToken);
+    }
+
+    private async Task PopulateStatusActionsAsync(SalesOrderHeader order, CancellationToken cancellationToken)
+    {
+        ViewData["CanApprove"] = order.Details.Count > 0 &&
+            IsStatus(order.Status, DraftStatus) &&
+            await permissionService.HasActionAsync(User, AuthorizationActionCodes.ApproveSalesOrder, cancellationToken);
+        ViewData["CanDeliver"] = IsStatus(order.Status, ApprovedStatus) &&
+            await permissionService.HasActionAsync(User, AuthorizationActionCodes.DeliverSalesOrder, cancellationToken);
     }
 
     private async Task PopulateEditOptionsAsync(
