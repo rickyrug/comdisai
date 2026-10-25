@@ -102,6 +102,19 @@ public sealed class SalesOrderTests
     }
 
     [Fact]
+    public async Task Create_get_exposes_customer_addresses_for_default_delivery_address()
+    {
+        using var database = await CreateDatabaseAsync();
+        var setup = await SeedSalesOrderLookupsAsync(database.Context);
+        var controller = CreateController(database.Context);
+
+        var result = await controller.Create(CancellationToken.None);
+
+        var model = Assert.IsType<SalesOrderHeaderInputViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Equal(setup.Customer.Address, model.CustomerAddresses[setup.Customer.Id.ToString()]);
+    }
+
+    [Fact]
     public async Task Create_assigns_the_next_number_draft_status_and_audit_values()
     {
         using var database = await CreateDatabaseAsync();

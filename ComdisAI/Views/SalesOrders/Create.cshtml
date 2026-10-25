@@ -58,4 +58,24 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const addresses = @Json.Serialize(Model.CustomerAddresses);
+            const customer = document.getElementById("CustomerId");
+            const delivery = document.getElementById("DeliveryAddress");
+            let lastAutoFilled = null;
+
+            function apply() {
+                const address = (addresses[customer.value] || "").substring(0, 359);
+                const untouched = delivery.value.trim() === "" || delivery.value === lastAutoFilled;
+                if (address && untouched) {
+                    delivery.value = address;
+                    lastAutoFilled = address;
+                }
+            }
+
+            customer.addEventListener("change", apply);
+            apply();
+        })();
+    </script>
 }
