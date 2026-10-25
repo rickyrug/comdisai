@@ -409,6 +409,14 @@ public class SalesOrdersController(
         model.CustomerAddresses = addresses.ToDictionary(
             row => row.Id.ToString(CultureInfo.InvariantCulture),
             row => row.Address);
+        model.CustomerDefaultTaxes = (await dbContext.Customers
+            .AsNoTracking()
+            .Where(customer => customer.DefaultTaxId != null && customer.DefaultTax!.IsDeleted == false)
+            .Select(customer => new { customer.Id, TaxId = customer.DefaultTaxId!.Value })
+            .ToListAsync(cancellationToken))
+            .ToDictionary(
+                row => row.Id.ToString(CultureInfo.InvariantCulture),
+                row => row.TaxId.ToString(CultureInfo.InvariantCulture));
         model.Taxes = await dbContext.Taxes
             .AsNoTracking()
             .OrderBy(tax => tax.Name)

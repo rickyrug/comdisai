@@ -137,6 +137,9 @@ namespace ComdisAI.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("DefaultTaxId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime?>("DeletedAtUtc")
                         .HasColumnType("TEXT");
 
@@ -164,6 +167,8 @@ namespace ComdisAI.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DefaultTaxId");
 
                     b.ToTable("Customers");
                 });
@@ -779,6 +784,16 @@ namespace ComdisAI.Migrations
                         .HasDatabaseName("IX_UserRoles_idUser_idRole");
 
                     b.ToTable("UserRoles", (string)null);
+                });
+
+            modelBuilder.Entity("ComdisAI.Models.Customer", b =>
+                {
+                    b.HasOne("ComdisAI.Models.Tax", "DefaultTax")
+                        .WithMany()
+                        .HasForeignKey("DefaultTaxId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("DefaultTax");
                 });
 
             modelBuilder.Entity("ComdisAI.Models.Product", b =>

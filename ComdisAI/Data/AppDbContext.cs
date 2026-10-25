@@ -28,6 +28,11 @@ public class AppDbContext(
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.Entity<Customer>().HasQueryFilter(customer => !customer.IsDeleted);
+        modelBuilder.Entity<Customer>()
+            .HasOne(customer => customer.DefaultTax)
+            .WithMany()
+            .HasForeignKey(customer => customer.DefaultTaxId)
+            .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<ProductCategory>(entity =>
         {
             entity.Property(category => category.Name)
