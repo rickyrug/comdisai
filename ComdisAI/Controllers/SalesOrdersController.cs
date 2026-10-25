@@ -402,6 +402,13 @@ public class SalesOrdersController(
             .OrderBy(customer => customer.Name)
             .Select(customer => new SelectListItem(customer.Name, customer.Id.ToString(CultureInfo.InvariantCulture)))
             .ToListAsync(cancellationToken);
+        var addresses = await dbContext.Customers
+            .AsNoTracking()
+            .Select(customer => new { customer.Id, customer.Address })
+            .ToListAsync(cancellationToken);
+        model.CustomerAddresses = addresses.ToDictionary(
+            row => row.Id.ToString(CultureInfo.InvariantCulture),
+            row => row.Address);
         model.Taxes = await dbContext.Taxes
             .AsNoTracking()
             .OrderBy(tax => tax.Name)
