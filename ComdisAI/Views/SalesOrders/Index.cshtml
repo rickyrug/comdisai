@@ -1,6 +1,8 @@
+@using System.Globalization
 @model IReadOnlyList<SalesOrderHeader>
 @{
     ViewData["Title"] = "Sales Orders";
+    var statusItems = (SelectList)ViewData["Statuses"]!;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -19,6 +21,22 @@
 {
     <div class="alert alert-danger">@error</div>
 }
+
+<form method="get" asp-action="Index" class="row g-2 mb-3">
+    <div class="col-md-5">
+        <input type="search" name="q" value="@ViewData["Query"]" class="form-control"
+               placeholder="Search by order number, customer or status" />
+    </div>
+    <div class="col-md-3">
+        <select name="statusId" class="form-select" asp-items="statusItems">
+            <option value="">All statuses</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Search</button>
+        <a class="btn btn-outline-secondary" asp-action="Index">Clear</a>
+    </div>
+</form>
 
 <table class="table table-striped">
     <thead>
@@ -39,8 +57,26 @@
                 <td>@order.Customer.Name</td>
                 <td>@order.DeliveryDate.ToString("yyyy-MM-dd")</td>
                 <td>@order.Status.Name</td>
-                <td class="text-end">@order.Total.ToString("0.0000")</td>
-                <td><a asp-action="Details" asp-route-id="@order.Id">Open</a></td>
+                <td class="text-end">@order.Total.ToString("C2", CultureInfo.GetCultureInfo("en-US"))</td>
+                <td class="text-nowrap">
+                    <a class="btn btn-sm btn-outline-primary" asp-action="Details" asp-route-id="@order.Id">Open</a>
+                    @if (ViewData["CanPrint"] is true && order.Details.Count > 0)
+                    {
+                        <a class="btn btn-sm btn-outline-secondary" asp-action="Print" asp-route-id="@order.Id">Print</a>
+                    }
+                    @if (ViewData["CanApprove"] is true && order.Status.Name == "Draft" && order.Details.Count > 0)
+                    {
+                        <form asp-action="Approve" asp-route-id="@order.Id" asp-route-returnTo="index" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                        </form>
+                    }
+                    @if (ViewData["CanDeliver"] is true && order.Status.Name == "Approved" && order.Details.Count > 0)
+                    {
+                        <form asp-action="Deliver" asp-route-id="@order.Id" asp-route-returnTo="index" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-success">Mark delivered</button>
+                        </form>
+                    }
+                </td>
             </tr>
         }
     </tbody>
