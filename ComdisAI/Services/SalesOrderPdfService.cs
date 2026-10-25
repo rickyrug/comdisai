@@ -13,9 +13,10 @@ public sealed class SalesOrderPdfService
     [
         "CUSTOMER COPY",
         "BUSINESS COPY",
-        "DELIVERY NOTE"
+        DeliveryNoteLabel
     ];
 
+    private const string DeliveryNoteLabel = "DELIVERY NOTE";
     private const double PageMargin = 28;
     private const double TableRowHeight = 13;
     private const double PageBottomReserve = 34;
@@ -56,10 +57,11 @@ public sealed class SalesOrderPdfService
             .ThenBy(detail => detail.Product.Code, StringComparer.OrdinalIgnoreCase)
             .ThenBy(detail => detail.Id)
             .ToList();
+        var quantitiesOnly = copyLabel == DeliveryNoteLabel;
         var detailIndex = 0;
         var pageNumber = 1;
         var page = AddPage(document, order, copyLabel, pageNumber);
-        var y = DrawTableHeadings(page);
+        var y = DrawTableHeadings(page, quantitiesOnly);
         var totals = SalesOrderTotals.From(order);
 
         while (detailIndex < details.Count)
@@ -70,14 +72,14 @@ public sealed class SalesOrderPdfService
             if (!allFit && y + TableRowHeight > page.Height.Point - PageBottomReserve)
             {
                 page = AddPage(document, order, copyLabel, ++pageNumber);
-                y = DrawTableHeadings(page);
+                y = DrawTableHeadings(page, quantitiesOnly);
             }
 
             var detail = details[detailIndex++];
             var gross = detail.Qty * detail.Price;
             var discount = gross - detail.SubTotal;
             using var graphics = XGraphics.FromPdfPage(page, XGraphicsPdfPageOptions.Append);
-            var columns = GetColumnPositions(page);
+            var columns = GetColumnPositions(page, quantitiesOnly);
             var rowCells = new[]
             {
                 null,
@@ -88,6 +90,8 @@ public sealed class SalesOrderPdfService
                 discount > 0m ? "-" + Money(discount) : Money(0m),
                 Money(detail.SubTotal)
             };
+            if (quantitiesOnly)
+                rowCells = rowCells[..3];
             graphics.DrawString(
                 Fit(graphics, detail.Product.Name, columns[1] - columns[0] - 4),
                 SmallFont, XBrushes.Black,
@@ -101,10 +105,23 @@ public sealed class SalesOrderPdfService
             y += TableRowHeight;
         }
 
+        if (quantitiesOnly)
+        {
+            if (y + 40 > page.Height.Point - PageBottomReserve)
+            {
+                page = AddPage(document, order, copyLabel, ++pageNumber);
+                y = DrawTableHeadings(page, quantitiesOnly);
+            }
+            using var note = XGraphics.FromPdfPage(page, XGraphicsPdfPageOptions.Append);
+            note.DrawLine(XPens.Black, PageMargin, y, page.Width.Point - PageMargin, y);
+            DrawReceivedBy(note, page);
+            return;
+        }
+
         if (y + SummaryHeight + 6 > page.Height.Point - PageBottomReserve - LegendHeight)
         {
             page = AddPage(document, order, copyLabel, ++pageNumber);
-            y = DrawTableHeadings(page);
+            y = DrawTableHeadings(page, quantitiesOnly);
         }
 
         using var summary = XGraphics.FromPdfPage(page, XGraphicsPdfPageOptions.Append);
@@ -127,6 +144,15 @@ public sealed class SalesOrderPdfService
             new XRect(left, y, right - left, SummaryRowHeight), XStringFormats.CenterRight);
 
         DrawLegend(summary, page, order);
+    }
+
+    private static void DrawReceivedBy(XGraphics graphics, PdfPage page)
+    {
+        var width = page.Width.Point - 2 * PageMargin;
+        var signatureY = page.Height.Point - PageBottomReserve - 12;
+        graphics.DrawLine(XPens.Black, PageMargin + width * 0.5, signatureY, PageMargin + width, signatureY);
+        graphics.DrawString("Received by (name and signature)", SmallFont, XBrushes.Black,
+            new XRect(PageMargin + width * 0.5, signatureY + 1, width * 0.5, 10), XStringFormats.Center);
     }
 
     private static void DrawLegend(XGraphics graphics, PdfPage page, SalesOrderHeader order)
@@ -229,13 +255,15 @@ public sealed class SalesOrderPdfService
         return page;
     }
 
-    private static double DrawTableHeadings(PdfPage page)
+    private static double DrawTableHeadings(PdfPage page, bool quantitiesOnly)
     {
         var y = 92d;
-        var columns = GetColumnPositions(page);
+        var columns = GetColumnPositions(page, quantitiesOnly);
         using var graphics = XGraphics.FromPdfPage(page, XGraphicsPdfPageOptions.Append);
         graphics.DrawLine(XPens.Black, PageMargin, y, page.Width.Point - PageMargin, y);
-        string[] titles = ["Product", "Qty", "UOM", "Price", "Disc %", "Disc amt", "Subtotal"];
+        string[] titles = quantitiesOnly
+            ? ["Product", "Qty", "UOM"]
+            : ["Product", "Qty", "UOM", "Price", "Disc %", "Disc amt", "Subtotal"];
         for (var i = 0; i < titles.Length; i++)
         {
             var end = i + 1 < columns.Length ? columns[i + 1] - 3 : page.Width.Point - PageMargin;
@@ -247,10 +275,13 @@ public sealed class SalesOrderPdfService
         return y + TableRowHeight;
     }
 
-    private static double[] GetColumnPositions(PdfPage page)
+    private static double[] GetColumnPositions(PdfPage page, bool quantitiesOnly)
     {
         var usableWidth = page.Width.Point - 2 * PageMargin;
-        return new[] { 0d, 0.30, 0.40, 0.50, 0.64, 0.74, 0.86 }.Select(f => PageMargin + usableWidth * f).ToArray();
+        var fractions = quantitiesOnly
+            ? new[] { 0d, 0.60, 0.80 }
+            : new[] { 0d, 0.30, 0.40, 0.50, 0.64, 0.74, 0.86 };
+        return fractions.Select(f => PageMargin + usableWidth * f).ToArray();
     }
 
     private static byte[] ReadRobotoFont()
