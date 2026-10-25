@@ -24,15 +24,46 @@ public class SalesOrdersController(
     private const string DeliveredStatus = "Delivered";
 
     [RequireAction(AuthorizationActionCodes.ViewSalesOrder)]
-    public async Task<IActionResult> Index(CancellationToken cancellationToken)
+    public async Task<IActionResult> Index(
+        string? q,
+        int? statusId,
+        CancellationToken cancellationToken)
     {
-        var orders = await dbContext.SalesOrderHeaders
+        var query = dbContext.SalesOrderHeaders
             .IgnoreQueryFilters()
             .AsNoTracking()
             .Include(order => order.Customer)
             .Include(order => order.Status)
+            .Include(order => order.Details)
+            .AsQueryable();
+        var term = q?.Trim();
+        if (!string.IsNullOrEmpty(term))
+        {
+            query = query.Where(order =>
+                order.OrderNumber.Contains(term) ||
+                order.Customer.Name.Contains(term) ||
+                order.Status.Name.Contains(term));
+        }
+        if (statusId is not null)
+            query = query.Where(order => order.StatusId == statusId);
+
+        var orders = await query
             .OrderByDescending(order => order.OrderNumber)
             .ToListAsync(cancellationToken);
+        var statuses = await dbContext.Statuses
+            .AsNoTracking()
+            .Where(status => EF.Property<string>(status, "NormalizedEntity") == SalesOrderEntity.ToUpperInvariant())
+            .OrderBy(status => status.Name)
+            .ToListAsync(cancellationToken);
+        ViewData["Statuses"] = new SelectList(statuses, nameof(Status.Id), nameof(Status.Name), statusId);
+        ViewData["Query"] = term;
+        ViewData["StatusId"] = statusId;
+        ViewData["CanApprove"] = await permissionService.HasActionAsync(
+            User, AuthorizationActionCodes.ApproveSalesOrder, cancellationToken);
+        ViewData["CanDeliver"] = await permissionService.HasActionAsync(
+            User, AuthorizationActionCodes.DeliverSalesOrder, cancellationToken);
+        ViewData["CanPrint"] = await permissionService.HasActionAsync(
+            User, AuthorizationActionCodes.PrintSalesOrder, cancellationToken);
         ViewData["CanCreate"] = await permissionService.HasActionAsync(
             User, AuthorizationActionCodes.CreateSalesOrder, cancellationToken);
         return View(orders);
@@ -268,7 +299,7 @@ public class SalesOrdersController(
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequireAction(AuthorizationActionCodes.ApproveSalesOrder)]
-    public async Task<IActionResult> Approve(int id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Approve(int id, string? returnTo, CancellationToken cancellationToken)
     {
         var order = await GetOrderAsync(id, cancellationToken);
         if (order is null)
@@ -276,27 +307,27 @@ public class SalesOrdersController(
         if (!IsStatus(order.Status, DraftStatus) || order.Details.Count == 0)
         {
             TempData["Error"] = "Only a Draft sales order with at least one line can be approved.";
-            return RedirectToAction(nameof(Details), new { id });
+            return RedirectAfterStatusChange(id, returnTo);
         }
 
         var statuses = await GetRequiredStatusesAsync(cancellationToken);
         if (statuses is null)
         {
             TempData["Error"] = "SalesOrder statuses are not configured. Add Draft, Approved, and Delivered statuses.";
-            return RedirectToAction(nameof(Details), new { id });
+            return RedirectAfterStatusChange(id, returnTo);
         }
 
         order.StatusId = statuses[ApprovedStatus].Id;
         order.Status = statuses[ApprovedStatus];
         await unitOfWork.SaveChangesAsync(cancellationToken);
         TempData["Success"] = "Sales order approved.";
-        return RedirectToAction(nameof(Details), new { id });
+        return RedirectAfterStatusChange(id, returnTo);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequireAction(AuthorizationActionCodes.DeliverSalesOrder)]
-    public async Task<IActionResult> Deliver(int id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Deliver(int id, string? returnTo, CancellationToken cancellationToken)
     {
         var order = await GetOrderAsync(id, cancellationToken);
         if (order is null)
@@ -304,21 +335,21 @@ public class SalesOrdersController(
         if (!IsStatus(order.Status, ApprovedStatus) || order.Details.Count == 0)
         {
             TempData["Error"] = "Only an Approved sales order with at least one line can be marked as Delivered.";
-            return RedirectToAction(nameof(Details), new { id });
+            return RedirectAfterStatusChange(id, returnTo);
         }
 
         var statuses = await GetRequiredStatusesAsync(cancellationToken);
         if (statuses is null)
         {
             TempData["Error"] = "SalesOrder statuses are not configured. Add Draft, Approved, and Delivered statuses.";
-            return RedirectToAction(nameof(Details), new { id });
+            return RedirectAfterStatusChange(id, returnTo);
         }
 
         order.StatusId = statuses[DeliveredStatus].Id;
         order.Status = statuses[DeliveredStatus];
         await unitOfWork.SaveChangesAsync(cancellationToken);
         TempData["Success"] = "Sales order marked as Delivered.";
-        return RedirectToAction(nameof(Details), new { id });
+        return RedirectAfterStatusChange(id, returnTo);
     }
 
     [RequireAction(AuthorizationActionCodes.PrintSalesOrder)]
@@ -336,6 +367,11 @@ public class SalesOrdersController(
         var pdf = pdfService.Create(order);
         return File(pdf, "application/pdf", $"SalesOrder-{order.OrderNumber}.pdf");
     }
+
+    private IActionResult RedirectAfterStatusChange(int id, string? returnTo) =>
+        returnTo == "index"
+            ? RedirectToAction(nameof(Index))
+            : RedirectToAction(nameof(Details), new { id });
 
     private async Task<SalesOrderHeader?> GetOrderAsync(int id, CancellationToken cancellationToken) =>
         await dbContext.SalesOrderHeaders

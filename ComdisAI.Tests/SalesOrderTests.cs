@@ -198,13 +198,13 @@ public sealed class SalesOrderTests
             AuthorizationActionCodes.ApproveSalesOrder,
             AuthorizationActionCodes.DeliverSalesOrder);
 
-        var approvedResult = await controller.Approve(order.Id, CancellationToken.None);
+        var approvedResult = await controller.Approve(order.Id, null, CancellationToken.None);
         Assert.IsType<RedirectToActionResult>(approvedResult);
         Assert.Equal("Approved", (await database.Context.SalesOrderHeaders
             .Include(row => row.Status)
             .SingleAsync()).Status.Name);
 
-        var deliveredResult = await controller.Deliver(order.Id, CancellationToken.None);
+        var deliveredResult = await controller.Deliver(order.Id, null, CancellationToken.None);
         Assert.IsType<RedirectToActionResult>(deliveredResult);
         Assert.Equal("Delivered", (await database.Context.SalesOrderHeaders
             .Include(row => row.Status)
@@ -234,6 +234,42 @@ public sealed class SalesOrderTests
         Assert.Equal(3, document.PageCount);
         Assert.Equal(420, document.Pages[0].Width.Point, 0);
         Assert.Equal(595, document.Pages[0].Height.Point, 0);
+    }
+
+    [Fact]
+    public async Task Index_filters_by_order_number_customer_and_status()
+    {
+        using var database = await CreateDatabaseAsync();
+        var setup = await SeedSalesOrderLookupsAsync(database.Context);
+        var order = await AddOrderAsync(database.Context, setup, setup.Statuses["Draft"]);
+        var controller = CreateController(database.Context, AuthorizationActionCodes.ViewSalesOrder);
+
+        async Task<int> CountAsync(string? q, int? statusId)
+        {
+            var result = await controller.Index(q, statusId, CancellationToken.None);
+            var model = Assert.IsAssignableFrom<IReadOnlyList<SalesOrderHeader>>(
+                Assert.IsType<ViewResult>(result).Model);
+            return model.Count;
+        }
+
+        Assert.Equal(1, await CountAsync("2026-00001", null));
+        Assert.Equal(1, await CountAsync(order.Customer.Name, null));
+        Assert.Equal(1, await CountAsync(null, setup.Statuses["Draft"].Id));
+        Assert.Equal(0, await CountAsync(null, setup.Statuses["Approved"].Id));
+        Assert.Equal(0, await CountAsync("nomatch", null));
+    }
+
+    [Fact]
+    public async Task Approve_from_index_redirects_back_to_index()
+    {
+        using var database = await CreateDatabaseAsync();
+        var setup = await SeedSalesOrderLookupsAsync(database.Context);
+        var order = await AddOrderAsync(database.Context, setup, setup.Statuses["Draft"]);
+        var controller = CreateController(database.Context, AuthorizationActionCodes.ApproveSalesOrder);
+
+        var result = await controller.Approve(order.Id, "index", CancellationToken.None);
+
+        Assert.Equal("Index", Assert.IsType<RedirectToActionResult>(result).ActionName);
     }
 
     [Fact]
