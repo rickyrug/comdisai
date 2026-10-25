@@ -17,13 +17,17 @@ public sealed class SalesOrderPdfService
     ];
 
     private const double PageMargin = 28;
-    private const double TableRowHeight = 18;
-    private const double FooterReserve = 104;
+    private const double TableRowHeight = 13;
+    private const double PageBottomReserve = 34;
+    private const double SummaryRowHeight = 12;
+    private const double SummaryHeight = 2 * SummaryRowHeight + 6;
+    private const double LegendHeight = 100;
     private static readonly byte[] RobotoFont = ReadRobotoFont();
     private static readonly XFont TitleFont;
     private static readonly XFont HeaderFont;
     private static readonly XFont BodyFont;
     private static readonly XFont SmallFont;
+    private static XFont SummaryLineFont => SmallFont;
 
     static SalesOrderPdfService()
     {
@@ -47,50 +51,157 @@ public sealed class SalesOrderPdfService
 
     private static void DrawCopy(PdfDocument document, SalesOrderHeader order, string copyLabel)
     {
-        var details = order.Details.OrderBy(detail => detail.Id).ToList();
+        var details = order.Details
+            .OrderBy(detail => detail.Product.ProductCategory?.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(detail => detail.Product.Code, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(detail => detail.Id)
+            .ToList();
         var detailIndex = 0;
         var pageNumber = 1;
         var page = AddPage(document, order, copyLabel, pageNumber);
         var y = DrawTableHeadings(page);
+        var totals = SalesOrderTotals.From(order);
 
         while (detailIndex < details.Count)
         {
-            if (y + TableRowHeight > page.Height.Point - FooterReserve)
+            var remaining = details.Count - detailIndex;
+            var legendTop = page.Height.Point - PageBottomReserve - LegendHeight;
+            var allFit = y + remaining * TableRowHeight + SummaryHeight + 6 <= legendTop;
+            if (!allFit && y + TableRowHeight > page.Height.Point - PageBottomReserve)
             {
                 page = AddPage(document, order, copyLabel, ++pageNumber);
                 y = DrawTableHeadings(page);
             }
 
             var detail = details[detailIndex++];
+            var gross = detail.Qty * detail.Price;
+            var discount = gross - detail.SubTotal;
             using var graphics = XGraphics.FromPdfPage(page, XGraphicsPdfPageOptions.Append);
             var columns = GetColumnPositions(page);
-            graphics.DrawString(detail.Product.Name, SmallFont, XBrushes.Black,
+            var rowCells = new[]
+            {
+                null,
+                detail.Qty.ToString("0.####", CultureInfo.InvariantCulture),
+                detail.Product.Uom?.Name ?? "",
+                Money(detail.Price),
+                (detail.DiscountPercent ?? 0m).ToString("0.####", CultureInfo.InvariantCulture) + "%",
+                discount > 0m ? "-" + Money(discount) : Money(0m),
+                Money(detail.SubTotal)
+            };
+            graphics.DrawString(
+                Fit(graphics, detail.Product.Name, columns[1] - columns[0] - 4),
+                SmallFont, XBrushes.Black,
                 new XRect(columns[0], y, columns[1] - columns[0] - 4, TableRowHeight), XStringFormats.CenterLeft);
-            graphics.DrawString(Format(detail.Qty), SmallFont, XBrushes.Black,
-                new XRect(columns[1], y, columns[2] - columns[1] - 4, TableRowHeight), XStringFormats.CenterRight);
-            graphics.DrawString(Format(detail.Price), SmallFont, XBrushes.Black,
-                new XRect(columns[2], y, columns[3] - columns[2] - 4, TableRowHeight), XStringFormats.CenterRight);
-            graphics.DrawString(Format(detail.SubTotal), SmallFont, XBrushes.Black,
-                new XRect(columns[3], y, page.Width.Point - PageMargin - columns[3], TableRowHeight), XStringFormats.CenterRight);
+            for (var i = 1; i < columns.Length; i++)
+            {
+                var end = i + 1 < columns.Length ? columns[i + 1] - 3 : page.Width.Point - PageMargin;
+                graphics.DrawString(Fit(graphics, rowCells[i]!, end - columns[i]), SmallFont, XBrushes.Black,
+                    new XRect(columns[i], y, end - columns[i], TableRowHeight), XStringFormats.CenterRight);
+            }
             y += TableRowHeight;
         }
 
-        using (var graphics = XGraphics.FromPdfPage(page, XGraphicsPdfPageOptions.Append))
+        if (y + SummaryHeight + 6 > page.Height.Point - PageBottomReserve - LegendHeight)
         {
-            var left = PageMargin;
-            var right = page.Width.Point - PageMargin;
-            graphics.DrawLine(XPens.Black, left, y + 3, right, y + 3);
-            graphics.DrawString($"Subtotal: {Format(order.Subtotal)}", BodyFont, XBrushes.Black,
-                new XRect(left, y + 8, right - left, 14), XStringFormats.CenterRight);
-            graphics.DrawString(
-                $"Discounts: {Format(order.DiscountPercent1)}% / {Format(order.DiscountPercent2)}% / {Format(order.DiscountPercent3)}%",
-                SmallFont, XBrushes.Black, new XRect(left, y + 24, right - left, 12), XStringFormats.CenterRight);
-            graphics.DrawString($"Tax: {Format(order.TaxAmount)}", BodyFont, XBrushes.Black,
-                new XRect(left, y + 38, right - left, 14), XStringFormats.CenterRight);
-            graphics.DrawString($"TOTAL: {Format(order.Total)}", HeaderFont, XBrushes.Black,
-                new XRect(left, y + 55, right - left, 15), XStringFormats.CenterRight);
-            graphics.DrawString($"Tax: {order.Tax.Name} ({Format(order.Tax.Value * 100m)}%)", SmallFont, XBrushes.Black,
-                new XRect(left, y + 73, right - left, 12), XStringFormats.CenterRight);
+            page = AddPage(document, order, copyLabel, ++pageNumber);
+            y = DrawTableHeadings(page);
+        }
+
+        using var summary = XGraphics.FromPdfPage(page, XGraphicsPdfPageOptions.Append);
+        var left = PageMargin;
+        var right = page.Width.Point - PageMargin;
+        summary.DrawLine(XPens.Black, left, y, right, y);
+        y += 6;
+
+        var discounts = totals.Discount1 + totals.Discount2 + totals.Discount3;
+        var line = $"Subtotal {Money(order.Subtotal)}    " +
+            $"Total discounts ({Pct(order.DiscountPercent1)}% + {Pct(order.DiscountPercent2)}% + {Pct(order.DiscountPercent3)}%) -{Money(discounts)}    " +
+            $"Tax: {order.Tax.Name} ({Pct(order.Tax.Value * 100m)}%) {Money(order.TaxAmount)}";
+        var lineFont = SummaryLineFont;
+        if (summary.MeasureString(line, lineFont).Width > right - left)
+            lineFont = new XFont("Roboto", 6, XFontStyleEx.Regular);
+        summary.DrawString(line, lineFont, XBrushes.Black,
+            new XRect(left, y, right - left, SummaryRowHeight), XStringFormats.CenterRight);
+        y += SummaryRowHeight;
+        summary.DrawString($"TOTAL {Money(order.Total)}", HeaderFont, XBrushes.Black,
+            new XRect(left, y, right - left, SummaryRowHeight), XStringFormats.CenterRight);
+
+        DrawLegend(summary, page, order);
+    }
+
+    private static void DrawLegend(XGraphics graphics, PdfPage page, SalesOrderHeader order)
+    {
+        var width = page.Width.Point - 2 * PageMargin;
+        var top = page.Height.Point - PageBottomReserve - LegendHeight;
+        var printed = DateTime.Now;
+        var text = $"I (WE) OWE AND PROMISE UNCONDITIONALLY TO PAY BY THIS PROMISSORY NOTE IN THE CITY OF PUEBLA, " +
+            $"ON THE {printed.Day} DAY OF {printed.ToString("MMMM", CultureInfo.InvariantCulture).ToUpperInvariant()} {printed.Year}, " +
+            $"TO THE ORDER OF ____________________ THE AMOUNT OF $ {order.Total.ToString("N2", CultureInfo.GetCultureInfo("en-US"))} " +
+            "VALUE RECEIVED TO MY (OUR) FULL SATISFACTION.";
+        var lines = Wrap(graphics, text, width, 6);
+        for (var i = 0; i < lines.Count; i++)
+            graphics.DrawString(lines[i], SmallFont, XBrushes.Black,
+                new XRect(PageMargin, top + i * 10, width, 10), XStringFormats.CenterLeft);
+        var next = top + lines.Count * 10 + 4;
+        graphics.DrawString("ACCEPTED AND PAYABLE UPON MATURITY", SmallFont, XBrushes.Black,
+            new XRect(PageMargin, next, width, 10), XStringFormats.CenterLeft);
+        var signatureY = top + LegendHeight - 12;
+        graphics.DrawLine(XPens.Black, PageMargin + width * 0.5, signatureY, PageMargin + width, signatureY);
+        graphics.DrawString("Customer signature", SmallFont, XBrushes.Black,
+            new XRect(PageMargin + width * 0.5, signatureY + 1, width * 0.5, 10), XStringFormats.Center);
+    }
+
+    private static List<string> Wrap(XGraphics graphics, string text, double width, int maxLines)
+    {
+        var lines = new List<string>();
+        var current = "";
+        foreach (var word in text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var candidate = current.Length == 0 ? word : current + " " + word;
+            if (current.Length > 0 && graphics.MeasureString(candidate, SmallFont).Width > width)
+            {
+                lines.Add(current);
+                current = word;
+            }
+            else
+                current = candidate;
+        }
+        if (current.Length > 0)
+            lines.Add(current);
+        if (lines.Count > maxLines)
+        {
+            lines = lines.Take(maxLines).ToList();
+            lines[^1] = Fit(graphics, lines[^1] + "...", width);
+        }
+        return lines.Select(line => Fit(graphics, line, width)).ToList();
+    }
+
+    private static string Fit(XGraphics graphics, string text, double width)
+    {
+        if (graphics.MeasureString(text, SmallFont).Width <= width)
+            return text;
+        while (text.Length > 1 && graphics.MeasureString(text + "...", SmallFont).Width > width)
+            text = text[..^1];
+        return text + "...";
+    }
+
+    private static string Pct(decimal value) => value.ToString("0.####", CultureInfo.InvariantCulture);
+
+    private static string Money(decimal value) => value.ToString("C2", CultureInfo.GetCultureInfo("en-US"));
+
+    private sealed record SalesOrderTotals(
+        decimal Gross, decimal LineDiscounts, decimal Discount1, decimal Discount2, decimal Discount3, decimal Taxable)
+    {
+        public static SalesOrderTotals From(SalesOrderHeader order)
+        {
+            var gross = order.Details.Sum(d => d.Qty * d.Price);
+            var lineDiscounts = gross - order.Details.Sum(d => d.SubTotal);
+            var d1 = order.Subtotal * order.DiscountPercent1 / 100m;
+            var afterD1 = order.Subtotal - d1;
+            var d2 = afterD1 * order.DiscountPercent2 / 100m;
+            var afterD2 = afterD1 - d2;
+            var d3 = afterD2 * order.DiscountPercent3 / 100m;
+            return new SalesOrderTotals(gross, lineDiscounts, d1, d2, d3, afterD2 - d3);
         }
     }
 
@@ -104,18 +215,15 @@ public sealed class SalesOrderPdfService
         page.Size = PdfSharp.PageSize.A5;
         using var graphics = XGraphics.FromPdfPage(page);
         var width = page.Width.Point - 2 * PageMargin;
-        graphics.DrawString("SALES ORDER", TitleFont, XBrushes.Black,
+        graphics.DrawString($"SALES ORDER {order.OrderNumber}    {copyLabel}", TitleFont, XBrushes.Black,
             new XRect(PageMargin, 18, width, 20), XStringFormats.CenterLeft);
-        graphics.DrawString(copyLabel, HeaderFont, XBrushes.Black,
-            new XRect(PageMargin, 39, width, 14), XStringFormats.CenterLeft);
-        graphics.DrawString($"Order: {order.OrderNumber}    Status: {order.Status.Name}", BodyFont, XBrushes.Black,
-            new XRect(PageMargin, 57, width, 14), XStringFormats.CenterLeft);
-        graphics.DrawString($"Customer: {order.Customer.Name}", BodyFont, XBrushes.Black,
-            new XRect(PageMargin, 74, width, 14), XStringFormats.CenterLeft);
-        graphics.DrawString($"Delivery date: {order.DeliveryDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}",
-            BodyFont, XBrushes.Black, new XRect(PageMargin, 91, width, 14), XStringFormats.CenterLeft);
-        graphics.DrawString($"Delivery address: {order.DeliveryAddress}", SmallFont, XBrushes.Black,
-            new XRect(PageMargin, 108, width, 27), XStringFormats.TopLeft);
+        graphics.DrawString(
+            $"Delivery date: {order.DeliveryDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}",
+            BodyFont, XBrushes.Black, new XRect(PageMargin, 18, width, 20), XStringFormats.CenterRight);
+        var lines = Wrap(graphics, $"{order.Customer.Name} - {order.DeliveryAddress}", width, 4);
+        for (var i = 0; i < lines.Count; i++)
+            graphics.DrawString(lines[i], SmallFont, XBrushes.Black,
+                new XRect(PageMargin, 44 + i * 10, width, 10), XStringFormats.CenterLeft);
         graphics.DrawString($"Page {pageNumber}", SmallFont, XBrushes.Black,
             new XRect(PageMargin, page.Height.Point - 22, width, 12), XStringFormats.CenterRight);
         return page;
@@ -123,18 +231,18 @@ public sealed class SalesOrderPdfService
 
     private static double DrawTableHeadings(PdfPage page)
     {
-        var y = 143d;
+        var y = 92d;
         var columns = GetColumnPositions(page);
         using var graphics = XGraphics.FromPdfPage(page, XGraphicsPdfPageOptions.Append);
         graphics.DrawLine(XPens.Black, PageMargin, y, page.Width.Point - PageMargin, y);
-        graphics.DrawString("Product", HeaderFont, XBrushes.Black,
-            new XRect(columns[0], y + 2, columns[1] - columns[0] - 4, TableRowHeight), XStringFormats.CenterLeft);
-        graphics.DrawString("Qty", HeaderFont, XBrushes.Black,
-            new XRect(columns[1], y + 2, columns[2] - columns[1] - 4, TableRowHeight), XStringFormats.CenterRight);
-        graphics.DrawString("Price", HeaderFont, XBrushes.Black,
-            new XRect(columns[2], y + 2, columns[3] - columns[2] - 4, TableRowHeight), XStringFormats.CenterRight);
-        graphics.DrawString("Subtotal", HeaderFont, XBrushes.Black,
-            new XRect(columns[3], y + 2, page.Width.Point - PageMargin - columns[3], TableRowHeight), XStringFormats.CenterRight);
+        string[] titles = ["Product", "Qty", "UOM", "Price", "Disc %", "Disc amt", "Subtotal"];
+        for (var i = 0; i < titles.Length; i++)
+        {
+            var end = i + 1 < columns.Length ? columns[i + 1] - 3 : page.Width.Point - PageMargin;
+            graphics.DrawString(titles[i], SmallFont, XBrushes.Black,
+                new XRect(columns[i], y + 2, end - columns[i], TableRowHeight),
+                i == 0 ? XStringFormats.CenterLeft : XStringFormats.CenterRight);
+        }
         graphics.DrawLine(XPens.Black, PageMargin, y + TableRowHeight, page.Width.Point - PageMargin, y + TableRowHeight);
         return y + TableRowHeight;
     }
@@ -142,11 +250,8 @@ public sealed class SalesOrderPdfService
     private static double[] GetColumnPositions(PdfPage page)
     {
         var usableWidth = page.Width.Point - 2 * PageMargin;
-        return [PageMargin, PageMargin + usableWidth * 0.55, PageMargin + usableWidth * 0.68, PageMargin + usableWidth * 0.83];
+        return new[] { 0d, 0.30, 0.40, 0.50, 0.64, 0.74, 0.86 }.Select(f => PageMargin + usableWidth * f).ToArray();
     }
-
-    private static string Format(decimal value) =>
-        value.ToString("0.0000", CultureInfo.InvariantCulture);
 
     private static byte[] ReadRobotoFont()
     {
