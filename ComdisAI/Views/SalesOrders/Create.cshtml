@@ -62,6 +62,8 @@
         (function () {
             const addresses = @Json.Serialize(Model.CustomerAddresses);
             const customer = document.getElementById("CustomerId");
+            const defaultTaxes = @Json.Serialize(Model.CustomerDefaultTaxes);
+            const tax = document.getElementById("TaxId");
             const delivery = document.getElementById("DeliveryAddress");
             let lastAutoFilled = null;
 
@@ -74,7 +76,13 @@
                 }
             }
 
-            customer.addEventListener("change", apply);
+            function applyTax() {
+                const taxId = defaultTaxes[customer.value];
+                if (taxId) tax.value = taxId;
+            }
+
+            customer.addEventListener("change", function () { apply(); applyTax(); });
+            if (!tax.value) applyTax();
             apply();
         })();
     </script>
