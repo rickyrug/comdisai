@@ -154,6 +154,12 @@
             <button type="submit" class="btn btn-success">Mark delivered</button>
         </form>
     }
+    @if (ViewData["CanCancel"] is true)
+    {
+        <form asp-action="Cancel" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Cancel this sales order?');">
+            <button type="submit" class="btn btn-danger">Cancel order</button>
+        </form>
+    }
     @if (ViewData["CanPrint"] is true)
     {
         <a class="btn btn-outline-secondary" asp-action="Print" asp-route-id="@Model.Id">Download PDF (3 copies)</a>
