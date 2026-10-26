@@ -19,6 +19,7 @@
     var grantedActions = User.Identity?.IsAuthenticated == true
         ? (await PermissionService.GetActiveActionCodesAsync(User)).ToHashSet(StringComparer.Ordinal)
         : new HashSet<string>(StringComparer.Ordinal);
+    var canViewSuppliers = grantedActions.Contains(AuthorizationActionCodes.ViewSupplier);
     var canViewBanks = grantedActions.Contains(AuthorizationActionCodes.ViewBank);
     var canViewUoms = grantedActions.Contains(AuthorizationActionCodes.ViewUom);
     var canViewProducts = grantedActions.Contains(AuthorizationActionCodes.ViewProduct);
@@ -66,7 +67,7 @@
                                 <a class="nav-link text-dark" asp-controller="Home" asp-action="Index">Home</a>
                             </li>
                         }
-                        @if (canViewBanks || canViewUoms || canViewProducts || canViewProductCategories || canViewStatuses || canViewTaxes)
+                        @if (canViewBanks || canViewUoms || canViewProducts || canViewSuppliers || canViewProductCategories || canViewStatuses || canViewTaxes)
                         {
                             <li class="nav-item dropdown">
                                 <button class="nav-link dropdown-toggle text-dark" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
@@ -80,6 +81,12 @@
                                         </li>
                                     }
                                    
+                                    @if (canViewSuppliers)
+                                    {
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Suppliers" asp-action="Index">Suppliers</a>
+                                        </li>
+                                    }
                                     @if (canViewBanks || canViewUoms || canViewProductCategories || canViewStatuses || canViewTaxes)
                                     {
                                         <li class="dropend dropdown-submenu">
