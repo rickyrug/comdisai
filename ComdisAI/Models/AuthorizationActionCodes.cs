@@ -54,4 +54,5 @@ public static class AuthorizationActionCodes
     public const string PrintSalesOrder = "PRINT_SALES_ORDER";
     public const string DeliverSalesOrder = "DELIVER_SALES_ORDER";
     public const string EditDeliveredSalesOrder = "EDIT_DELIVERED_SALES_ORDER";
+    public const string CancelSalesOrder = "CANCEL_SALES_ORDER";
 }

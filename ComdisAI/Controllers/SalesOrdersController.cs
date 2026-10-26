@@ -22,6 +22,7 @@ public class SalesOrdersController(
     private const string DraftStatus = "Draft";
     private const string ApprovedStatus = "Approved";
     private const string DeliveredStatus = "Delivered";
+    private const string CancelledStatus = "Cancelled";
 
     [RequireAction(AuthorizationActionCodes.ViewSalesOrder)]
     public async Task<IActionResult> Index(
@@ -78,7 +79,7 @@ public class SalesOrdersController(
 
         var hasDetails = order.Details.Count > 0;
         var isDelivered = IsStatus(order.Status, DeliveredStatus);
-        ViewData["CanEdit"] = await permissionService.HasActionAsync(
+        ViewData["CanEdit"] = !IsStatus(order.Status, CancelledStatus) && await permissionService.HasActionAsync(
             User,
             isDelivered
                 ? AuthorizationActionCodes.EditDeliveredSalesOrder
@@ -89,6 +90,8 @@ public class SalesOrdersController(
             await permissionService.HasActionAsync(User, AuthorizationActionCodes.ApproveSalesOrder, cancellationToken);
         ViewData["CanDeliver"] = IsStatus(order.Status, ApprovedStatus) &&
             await permissionService.HasActionAsync(User, AuthorizationActionCodes.DeliverSalesOrder, cancellationToken);
+        ViewData["CanCancel"] = (IsStatus(order.Status, DraftStatus) || IsStatus(order.Status, ApprovedStatus)) &&
+            await permissionService.HasActionAsync(User, AuthorizationActionCodes.CancelSalesOrder, cancellationToken);
         ViewData["CanPrint"] = hasDetails &&
             await permissionService.HasActionAsync(User, AuthorizationActionCodes.PrintSalesOrder, cancellationToken);
         return View(order);
@@ -355,6 +358,38 @@ public class SalesOrdersController(
         return RedirectAfterStatusChange(id, returnTo);
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequireAction(AuthorizationActionCodes.CancelSalesOrder)]
+    public async Task<IActionResult> Cancel(int id, string? returnTo, CancellationToken cancellationToken)
+    {
+        var order = await GetOrderAsync(id, cancellationToken);
+        if (order is null)
+            return NotFound();
+        if (!IsStatus(order.Status, DraftStatus) && !IsStatus(order.Status, ApprovedStatus))
+        {
+            TempData["Error"] = "Only a Draft or Approved sales order can be cancelled.";
+            return RedirectAfterStatusChange(id, returnTo);
+        }
+
+        var cancelled = await dbContext.Statuses
+            .FirstOrDefaultAsync(status =>
+                EF.Property<string>(status, "NormalizedEntity") == SalesOrderEntity.ToUpperInvariant() &&
+                EF.Property<string>(status, "NormalizedName") == CancelledStatus.ToUpperInvariant(),
+                cancellationToken);
+        if (cancelled is null)
+        {
+            TempData["Error"] = "SalesOrder status 'Cancelled' is not configured. Add it in Statuses first.";
+            return RedirectAfterStatusChange(id, returnTo);
+        }
+
+        order.StatusId = cancelled.Id;
+        order.Status = cancelled;
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        TempData["Success"] = "Sales order cancelled.";
+        return RedirectAfterStatusChange(id, returnTo);
+    }
+
     [RequireAction(AuthorizationActionCodes.PrintSalesOrder)]
     public async Task<IActionResult> Print(int id, CancellationToken cancellationToken)
     {
@@ -393,6 +428,7 @@ public class SalesOrdersController(
     private async Task<bool> CanEditAsync(
         SalesOrderHeader order,
         CancellationToken cancellationToken) =>
+        !IsStatus(order.Status, CancelledStatus) &&
         await permissionService.HasActionAsync(
             User,
             IsStatus(order.Status, DeliveredStatus)

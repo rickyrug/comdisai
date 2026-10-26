@@ -62,7 +62,8 @@ public static class AuthorizationSeeder
         (AuthorizationActionCodes.ApproveSalesOrder, "Approve sales orders"),
         (AuthorizationActionCodes.PrintSalesOrder, "Print sales order documents"),
         (AuthorizationActionCodes.DeliverSalesOrder, "Mark sales orders as delivered"),
-        (AuthorizationActionCodes.EditDeliveredSalesOrder, "Edit delivered sales orders")
+        (AuthorizationActionCodes.EditDeliveredSalesOrder, "Edit delivered sales orders"),
+        (AuthorizationActionCodes.CancelSalesOrder, "Cancel sales orders")
     ];
 
     public static async Task SeedAsync(
