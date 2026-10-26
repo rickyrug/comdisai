@@ -581,6 +581,65 @@ namespace ComdisAI.Migrations
                     b.ToTable("Statuses");
                 });
 
+            modelBuilder.Entity("ComdisAI.Models.Supplier", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BankAccount")
+                        .IsRequired()
+                        .HasMaxLength(25)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("BankId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RFC")
+                        .IsRequired()
+                        .HasMaxLength(25)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BankId");
+
+                    b.ToTable("Suppliers");
+                });
+
             modelBuilder.Entity("ComdisAI.Models.Tax", b =>
                 {
                     b.Property<int>("Id")
@@ -878,6 +937,17 @@ namespace ComdisAI.Migrations
                     b.Navigation("Status");
 
                     b.Navigation("Tax");
+                });
+
+            modelBuilder.Entity("ComdisAI.Models.Supplier", b =>
+                {
+                    b.HasOne("ComdisAI.Models.Bank", "Bank")
+                        .WithMany()
+                        .HasForeignKey("BankId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Bank");
                 });
 
             modelBuilder.Entity("ComdisAI.Models.UserRole", b =>

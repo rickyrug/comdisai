@@ -1,0 +1,32 @@
+@model Supplier
+@{
+    var banks = ViewData["Banks"] as SelectList ?? new SelectList(Array.Empty<object>());
+}
+
+<div class="mb-3">
+    <label asp-for="Name" class="form-label"></label>
+    <input asp-for="Name" class="form-control" maxlength="255" />
+    <span asp-validation-for="Name" class="text-danger"></span>
+</div>
+<div class="mb-3">
+    <label asp-for="Address" class="form-label"></label>
+    <input asp-for="Address" class="form-control" maxlength="255" />
+    <span asp-validation-for="Address" class="text-danger"></span>
+</div>
+<div class="mb-3">
+    <label asp-for="RFC" class="form-label"></label>
+    <input asp-for="RFC" class="form-control" maxlength="25" />
+    <span asp-validation-for="RFC" class="text-danger"></span>
+</div>
+<div class="mb-3">
+    <label asp-for="BankId" class="form-label"></label>
+    <select asp-for="BankId" asp-items="banks" class="form-select">
+        <option value="">Select a bank</option>
+    </select>
+    <span asp-validation-for="BankId" class="text-danger"></span>
+</div>
+<div class="mb-3">
+    <label asp-for="BankAccount" class="form-label"></label>
+    <input asp-for="BankAccount" class="form-control" maxlength="25" />
+    <span asp-validation-for="BankAccount" class="text-danger"></span>
+</div>

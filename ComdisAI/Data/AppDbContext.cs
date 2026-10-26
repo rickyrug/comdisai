@@ -17,6 +17,7 @@ public class AppDbContext(
     public DbSet<Status> Statuses => Set<Status>();
     public DbSet<Tax> Taxes => Set<Tax>();
     public DbSet<Uom> Uoms => Set<Uom>();
+    public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<Bank> Banks => Set<Bank>();
     public DbSet<Actions> Actions => Set<Actions>();
     public DbSet<Role> Roles => Set<Role>();
@@ -32,6 +33,12 @@ public class AppDbContext(
             .HasOne(customer => customer.DefaultTax)
             .WithMany()
             .HasForeignKey(customer => customer.DefaultTaxId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Supplier>().HasQueryFilter(supplier => !supplier.IsDeleted);
+        modelBuilder.Entity<Supplier>()
+            .HasOne(supplier => supplier.Bank)
+            .WithMany()
+            .HasForeignKey(supplier => supplier.BankId)
             .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<ProductCategory>(entity =>
         {
@@ -325,6 +332,11 @@ public class AppDbContext(
                     customer.DeletedAtUtc = now;
                     customer.DeletedBy = actor;
                 }
+                else if (entry.Entity is Supplier { IsDeleted: true, DeletedAtUtc: null } supplier)
+                {
+                    supplier.DeletedAtUtc = now;
+                    supplier.DeletedBy = actor;
+                }
                 else if (entry.Entity is Uom { IsDeleted: true, DeletedAtUtc: null } uom)
                 {
                     uom.DeletedAtUtc = now;
@@ -372,7 +384,7 @@ public class AppDbContext(
                 }
             }
             else if (entry.State == EntityState.Deleted &&
-                     entry.Entity is Customer or Product or ProductCategory or Status or Tax or Uom or Bank or ComdisAI.Models.Actions or Role or User)
+                     entry.Entity is Customer or Supplier or Product or ProductCategory or Status or Tax or Uom or Bank or ComdisAI.Models.Actions or Role or User)
             {
                 var entity = entry.Entity;
                 switch (entity)
@@ -381,6 +393,11 @@ public class AppDbContext(
                         customer.IsDeleted = true;
                         customer.DeletedAtUtc = now;
                         customer.DeletedBy = actor;
+                        break;
+                    case Supplier supplier:
+                        supplier.IsDeleted = true;
+                        supplier.DeletedAtUtc = now;
+                        supplier.DeletedBy = actor;
                         break;
                     case Product product:
                         product.IsDeleted = true;
