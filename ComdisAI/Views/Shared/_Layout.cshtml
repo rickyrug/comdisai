@@ -4,6 +4,8 @@
 @using System.Globalization
 @inject IActionPermissionService PermissionService
 @{
+    var assemblyVersion = typeof(ComdisAI.Services.IActionPermissionService).Assembly.GetName().Version;
+    var appVersion = assemblyVersion is null ? "0.0.0" : $"{assemblyVersion.Major}.{assemblyVersion.Minor}.{assemblyVersion.Build}";
     var activeRoleId = int.TryParse(
         User.FindFirstValue(AuthorizationClaims.ActiveRoleId),
         NumberStyles.None,
@@ -213,7 +215,7 @@
             </div>
         </nav>
     </header>
-    <div class="container">
+    <div class="@(ViewData["FullWidth"] is true ? "container-fluid px-4" : "container")">
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
@@ -221,7 +223,7 @@
 
     <footer class="border-top footer text-muted">
         <div class="container">
-            &copy; 2026 - ComdisAI
+            &copy; 2026 - ComdisAI <span>v@(appVersion)</span>
             @if (grantedActions.Contains(AuthorizationActionCodes.ViewPrivacy))
             {
                 <span> - </span><a asp-controller="Home" asp-action="Privacy">Privacy</a>

@@ -2,7 +2,10 @@
 @model IReadOnlyList<SalesOrderHeader>
 @{
     ViewData["Title"] = "Sales Orders";
+    ViewData["FullWidth"] = true;
     var statusItems = (SelectList)ViewData["Statuses"]!;
+    var userNames = (IReadOnlyDictionary<string, string>)ViewData["UserNames"]!;
+    string UserName(string id) => userNames.TryGetValue(id, out var name) ? name : id;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -38,7 +41,8 @@
     </div>
 </form>
 
-<table class="table table-striped">
+<div class="table-responsive">
+<table class="table table-striped text-nowrap">
     <thead>
         <tr>
             <th>Order</th>
@@ -46,6 +50,10 @@
             <th>Delivery date</th>
             <th>Status</th>
             <th class="text-end">Total</th>
+            <th>Created</th>
+            <th>Created by</th>
+            <th>Updated</th>
+            <th>Updated by</th>
             <th></th>
         </tr>
     </thead>
@@ -58,6 +66,10 @@
                 <td>@order.DeliveryDate.ToString("yyyy-MM-dd")</td>
                 <td>@order.Status.Name</td>
                 <td class="text-end">@order.Total.ToString("C2", CultureInfo.GetCultureInfo("en-US"))</td>
+                <td class="text-nowrap">@order.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                <td>@UserName(order.CreatedBy)</td>
+                <td class="text-nowrap">@order.UpdatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                <td>@UserName(order.UpdatedBy)</td>
                 <td class="text-nowrap">
                     <a class="btn btn-sm btn-outline-primary" asp-action="Details" asp-route-id="@order.Id">Open</a>
                     @if (ViewData["CanPrint"] is true && order.Details.Count > 0)
@@ -81,3 +93,4 @@
         }
     </tbody>
 </table>
+</div>
