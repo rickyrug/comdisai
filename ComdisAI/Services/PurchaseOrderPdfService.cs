@@ -30,7 +30,7 @@ public sealed class PurchaseOrderPdfService
     static PurchaseOrderPdfService()
     {
         EmbeddedRobotoFontResolver.EnsureConfigured();
-        TitleFont = new XFont("Roboto", 13, XFontStyleEx.Regular);
+        TitleFont = new XFont("Roboto", 10, XFontStyleEx.Regular);
         HeaderFont = new XFont("Roboto", 8, XFontStyleEx.Regular);
         BodyFont = new XFont("Roboto", 8, XFontStyleEx.Regular);
         SmallFont = new XFont("Roboto", 7, XFontStyleEx.Regular);
