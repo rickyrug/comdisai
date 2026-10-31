@@ -12,6 +12,8 @@ public class AppDbContext(
     public DbSet<Product> Products => Set<Product>();
     public DbSet<SalesOrderHeader> SalesOrderHeaders => Set<SalesOrderHeader>();
     public DbSet<SalesOrderDetail> SalesOrderDetails => Set<SalesOrderDetail>();
+    public DbSet<PurchaseOrderHeader> PurchaseOrderHeaders => Set<PurchaseOrderHeader>();
+    public DbSet<PurchaseOrderDetail> PurchaseOrderDetails => Set<PurchaseOrderDetail>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
     public DbSet<Status> Statuses => Set<Status>();
@@ -163,6 +165,52 @@ public class AppDbContext(
             entity.HasOne(detail => detail.SalesOrderHeader)
                 .WithMany(header => header.Details)
                 .HasForeignKey(detail => detail.SalesOrderHeaderId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(detail => detail.Product)
+                .WithMany()
+                .HasForeignKey(detail => detail.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<PurchaseOrderHeader>(entity =>
+        {
+            entity.Property(header => header.OrderNumber)
+                .HasMaxLength(10)
+                .IsRequired();
+            entity.HasIndex(header => header.OrderNumber)
+                .IsUnique();
+            entity.Property(header => header.SupplyAddress)
+                .HasMaxLength(359)
+                .IsRequired();
+            entity.Property(header => header.ReceivedBy)
+                .HasMaxLength(255);
+            entity.Property(header => header.DiscountPercent1).HasPrecision(18, 4);
+            entity.Property(header => header.DiscountPercent2).HasPrecision(18, 4);
+            entity.Property(header => header.DiscountPercent3).HasPrecision(18, 4);
+            entity.Property(header => header.Subtotal).HasPrecision(18, 4);
+            entity.Property(header => header.TaxAmount).HasPrecision(18, 4);
+            entity.Property(header => header.Total).HasPrecision(18, 4);
+            entity.HasOne(header => header.Supplier)
+                .WithMany()
+                .HasForeignKey(header => header.SupplierId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(header => header.Status)
+                .WithMany()
+                .HasForeignKey(header => header.StatusId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(header => header.Tax)
+                .WithMany()
+                .HasForeignKey(header => header.TaxId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<PurchaseOrderDetail>(entity =>
+        {
+            entity.Property(detail => detail.DiscountPercent).HasPrecision(18, 4);
+            entity.Property(detail => detail.Qty).HasPrecision(18, 4);
+            entity.Property(detail => detail.Price).HasPrecision(18, 4);
+            entity.Property(detail => detail.SubTotal).HasPrecision(18, 4);
+            entity.HasOne(detail => detail.PurchaseOrderHeader)
+                .WithMany(header => header.Details)
+                .HasForeignKey(detail => detail.PurchaseOrderHeaderId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(detail => detail.Product)
                 .WithMany()

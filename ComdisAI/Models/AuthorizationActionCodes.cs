@@ -59,4 +59,12 @@ public static class AuthorizationActionCodes
     public const string DeliverSalesOrder = "DELIVER_SALES_ORDER";
     public const string EditDeliveredSalesOrder = "EDIT_DELIVERED_SALES_ORDER";
     public const string CancelSalesOrder = "CANCEL_SALES_ORDER";
+    public const string ViewPurchaseOrder = "VIEW_PURCHASE_ORDER";
+    public const string CreatePurchaseOrder = "CREATE_PURCHASE_ORDER";
+    public const string EditPurchaseOrder = "EDIT_PURCHASE_ORDER";
+    public const string ApprovePurchaseOrder = "APPROVE_PURCHASE_ORDER";
+    public const string PrintPurchaseOrder = "PRINT_PURCHASE_ORDER";
+    public const string SupplyPurchaseOrder = "SUPPLY_PURCHASE_ORDER";
+    public const string EditSuppliedPurchaseOrder = "EDIT_SUPPLIED_PURCHASE_ORDER";
+    public const string CancelPurchaseOrder = "CANCEL_PURCHASE_ORDER";
 }

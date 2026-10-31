@@ -67,7 +67,15 @@ public static class AuthorizationSeeder
         (AuthorizationActionCodes.PrintSalesOrder, "Print sales order documents"),
         (AuthorizationActionCodes.DeliverSalesOrder, "Mark sales orders as delivered"),
         (AuthorizationActionCodes.EditDeliveredSalesOrder, "Edit delivered sales orders"),
-        (AuthorizationActionCodes.CancelSalesOrder, "Cancel sales orders")
+        (AuthorizationActionCodes.CancelSalesOrder, "Cancel sales orders"),
+        (AuthorizationActionCodes.ViewPurchaseOrder, "View purchase orders"),
+        (AuthorizationActionCodes.CreatePurchaseOrder, "Create purchase orders"),
+        (AuthorizationActionCodes.EditPurchaseOrder, "Edit purchase orders"),
+        (AuthorizationActionCodes.ApprovePurchaseOrder, "Approve purchase orders"),
+        (AuthorizationActionCodes.PrintPurchaseOrder, "Print purchase order documents"),
+        (AuthorizationActionCodes.SupplyPurchaseOrder, "Acknowledge supplied purchase orders"),
+        (AuthorizationActionCodes.EditSuppliedPurchaseOrder, "Edit supplied purchase orders"),
+        (AuthorizationActionCodes.CancelPurchaseOrder, "Cancel purchase orders")
     ];
 
     public static async Task SeedAsync(

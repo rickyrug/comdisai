@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Reflection;
 using ComdisAI.Models;
 using PdfSharp.Drawing;
 using PdfSharp.Fonts;
@@ -23,7 +22,6 @@ public sealed class SalesOrderPdfService
     private const double SummaryRowHeight = 12;
     private const double SummaryHeight = 2 * SummaryRowHeight + 6;
     private const double LegendHeight = 100;
-    private static readonly byte[] RobotoFont = ReadRobotoFont();
     private static readonly XFont TitleFont;
     private static readonly XFont HeaderFont;
     private static readonly XFont BodyFont;
@@ -32,7 +30,7 @@ public sealed class SalesOrderPdfService
 
     static SalesOrderPdfService()
     {
-        GlobalFontSettings.FontResolver = new RobotoFontResolver();
+        EmbeddedRobotoFontResolver.EnsureConfigured();
         TitleFont = new XFont("Roboto", 13, XFontStyleEx.Regular);
         HeaderFont = new XFont("Roboto", 8, XFontStyleEx.Regular);
         BodyFont = new XFont("Roboto", 8, XFontStyleEx.Regular);
@@ -284,26 +282,4 @@ public sealed class SalesOrderPdfService
         return fractions.Select(f => PageMargin + usableWidth * f).ToArray();
     }
 
-    private static byte[] ReadRobotoFont()
-    {
-        using var stream = typeof(SalesOrderPdfService).Assembly.GetManifestResourceStream(
-            "ComdisAI.Resources.Fonts.RobotoVariable.ttf")
-            ?? throw new InvalidOperationException("The embedded Roboto font resource is missing.");
-        using var memoryStream = new MemoryStream();
-        stream.CopyTo(memoryStream);
-        return memoryStream.ToArray();
-    }
-
-    private sealed class RobotoFontResolver : IFontResolver
-    {
-        public FontResolverInfo? ResolveTypeface(string familyName, bool isBold, bool isItalic) =>
-            string.Equals(familyName, "Roboto", StringComparison.OrdinalIgnoreCase)
-                ? new FontResolverInfo("RobotoVariable")
-                : null;
-
-        public byte[]? GetFont(string faceName) =>
-            string.Equals(faceName, "RobotoVariable", StringComparison.Ordinal)
-                ? RobotoFont
-                : null;
-    }
 }

@@ -28,6 +28,7 @@
     var canViewTaxes = grantedActions.Contains(AuthorizationActionCodes.ViewTax);
     var canViewCustomers = grantedActions.Contains(AuthorizationActionCodes.ViewCustomer);
     var canViewSalesOrders = grantedActions.Contains(AuthorizationActionCodes.ViewSalesOrder);
+    var canViewPurchaseOrders = grantedActions.Contains(AuthorizationActionCodes.ViewPurchaseOrder);
     var canViewActions = grantedActions.Contains(AuthorizationActionCodes.ViewAction);
     var canViewRoles = grantedActions.Contains(AuthorizationActionCodes.ViewRole);
     var canViewUsers = grantedActions.Contains(AuthorizationActionCodes.ViewUser);
@@ -150,6 +151,12 @@
                                         </li>
                                     }
                                 </ul>
+                            </li>
+                        }
+                        @if (canViewPurchaseOrders)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="PurchaseOrders" asp-action="Index">Purchase Orders</a>
                             </li>
                         }
                         @if (canViewActions || canViewRoles || canViewUsers)
