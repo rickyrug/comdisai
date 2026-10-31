@@ -68,7 +68,7 @@
                                 <a class="nav-link text-dark" asp-controller="Home" asp-action="Index">Home</a>
                             </li>
                         }
-                        @if (canViewBanks || canViewUoms || canViewProducts || canViewSuppliers || canViewProductCategories || canViewStatuses || canViewTaxes)
+                        @if (canViewBanks || canViewUoms || canViewProducts || canViewCustomers || canViewSuppliers || canViewProductCategories || canViewStatuses || canViewTaxes || canViewActions || canViewRoles || canViewUsers)
                         {
                             <li class="nav-item dropdown">
                                 <button class="nav-link dropdown-toggle text-dark" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
@@ -81,7 +81,12 @@
                                             <a class="dropdown-item" asp-controller="Products" asp-action="Index">Products</a>
                                         </li>
                                     }
-                                   
+                                    @if (canViewCustomers)
+                                    {
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Customers" asp-action="Index">Customers</a>
+                                        </li>
+                                    }
                                     @if (canViewSuppliers)
                                     {
                                         <li>
@@ -128,70 +133,54 @@
                                             </ul>
                                         </li>
                                     }
+                                    @if (canViewActions || canViewRoles || canViewUsers)
+                                    {
+                                        <li class="dropend dropdown-submenu">
+                                            <button class="dropdown-item dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                                                Administrator
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li class="dropend dropdown-submenu">
+                                                    <button class="dropdown-item dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        Security
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        @if (canViewActions)
+                                                        {
+                                                            <li>
+                                                                <a class="dropdown-item" asp-controller="Actions" asp-action="Index">Actions</a>
+                                                            </li>
+                                                        }
+                                                        @if (canViewRoles)
+                                                        {
+                                                            <li>
+                                                                <a class="dropdown-item" asp-controller="Roles" asp-action="Index">Roles</a>
+                                                            </li>
+                                                        }
+                                                        @if (canViewUsers)
+                                                        {
+                                                            <li>
+                                                                <a class="dropdown-item" asp-controller="Users" asp-action="Index">Users</a>
+                                                            </li>
+                                                        }
+                                                    </ul>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                    }
                                 </ul>
                             </li>
                         }
-                        @if (canViewCustomers || canViewSalesOrders)
+                        @if (canViewSalesOrders)
                         {
-                            <li class="nav-item dropdown">
-                                <button class="nav-link dropdown-toggle text-dark" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    Sales
-                                </button>
-                                <ul class="dropdown-menu">
-                                    @if (canViewCustomers)
-                                    {
-                                        <li>
-                                            <a class="dropdown-item" asp-controller="Customers" asp-action="Index">Customers</a>
-                                        </li>
-                                    }
-                                    @if (canViewSalesOrders)
-                                    {
-                                        <li>
-                                            <a class="dropdown-item" asp-controller="SalesOrders" asp-action="Index">Sales Orders</a>
-                                        </li>
-                                    }
-                                </ul>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="SalesOrders" asp-action="Index">Sales Orders</a>
                             </li>
                         }
                         @if (canViewPurchaseOrders)
                         {
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-controller="PurchaseOrders" asp-action="Index">Purchase Orders</a>
-                            </li>
-                        }
-                        @if (canViewActions || canViewRoles || canViewUsers)
-                        {
-                            <li class="nav-item dropdown">
-                                <button class="nav-link dropdown-toggle text-dark" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-                                    Administrator
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li class="dropend dropdown-submenu">
-                                        <button class="dropdown-item dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                            Security
-                                        </button>
-                                        <ul class="dropdown-menu">
-                                            @if (canViewActions)
-                                            {
-                                                <li>
-                                                    <a class="dropdown-item" asp-controller="Actions" asp-action="Index">Actions</a>
-                                                </li>
-                                            }
-                                            @if (canViewRoles)
-                                            {
-                                                <li>
-                                                    <a class="dropdown-item" asp-controller="Roles" asp-action="Index">Roles</a>
-                                                </li>
-                                            }
-                                            @if (canViewUsers)
-                                            {
-                                                <li>
-                                                    <a class="dropdown-item" asp-controller="Users" asp-action="Index">Users</a>
-                                                </li>
-                                            }
-                                        </ul>
-                                    </li>
-                                </ul>
                             </li>
                         }
                     </ul>

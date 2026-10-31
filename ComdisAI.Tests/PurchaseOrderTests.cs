@@ -246,6 +246,31 @@ public sealed class PurchaseOrderTests
     }
 
     [Fact]
+    public async Task Details_resolves_receiver_name_from_user_id()
+    {
+        using var database = await CreateDatabaseAsync();
+        var setup = await SeedPurchaseOrderLookupsAsync(database.Context);
+        var order = await AddOrderAsync(database.Context, setup, setup.Statuses["Supplied"]);
+        var user = new User
+        {
+            Name = "Ana",
+            Surname = "Lopez",
+            Email = "ana@example.com",
+            PasswordHash = "x"
+        };
+        database.Context.Users.Add(user);
+        await database.Context.SaveChangesAsync();
+        order.ReceivedAtUtc = DateTime.UtcNow;
+        order.ReceivedBy = user.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        await database.Context.SaveChangesAsync();
+        var controller = CreateController(database.Context, AuthorizationActionCodes.ViewPurchaseOrder);
+
+        await controller.Details(order.Id, CancellationToken.None);
+
+        Assert.Equal("Ana Lopez", controller.ViewData["ReceivedByName"]);
+    }
+
+    [Fact]
     public async Task Pdf_contains_three_A5_copies()
     {
         using var database = await CreateDatabaseAsync();
