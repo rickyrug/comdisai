@@ -57,6 +57,19 @@ public class PurchaseOrdersController(
             .Where(status => EF.Property<string>(status, "NormalizedEntity") == PurchaseOrderEntity.ToUpperInvariant())
             .OrderBy(status => status.Name)
             .ToListAsync(cancellationToken);
+        var actorIds = orders
+            .SelectMany(order => new[] { order.CreatedBy, order.UpdatedBy })
+            .Distinct()
+            .ToList();
+        var userNames = (await dbContext.Users
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .ToListAsync(cancellationToken))
+            .Where(user => actorIds.Contains(user.Id.ToString(CultureInfo.InvariantCulture)))
+            .ToDictionary(
+                user => user.Id.ToString(CultureInfo.InvariantCulture),
+                user => $"{user.Name} {user.Surname}".Trim());
+        ViewData["UserNames"] = userNames;
         ViewData["Statuses"] = new SelectList(statuses, nameof(Status.Id), nameof(Status.Name), statusId);
         ViewData["Query"] = term;
         ViewData["StatusId"] = statusId;
