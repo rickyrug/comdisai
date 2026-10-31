@@ -46,3 +46,16 @@ body {
     margin-left: 1rem;
   }
 }
+.collapse-icon {
+  display: inline-block;
+  width: 0.6em;
+  height: 0.6em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-135deg) translate(-0.1em, -0.1em);
+  transition: transform 0.2s ease;
+}
+
+.btn.collapsed > .collapse-icon {
+  transform: rotate(45deg) translate(-0.1em, -0.1em);
+}

@@ -95,7 +95,22 @@ public class PurchaseOrdersController(
             await permissionService.HasActionAsync(User, AuthorizationActionCodes.CancelPurchaseOrder, cancellationToken);
         ViewData["CanPrint"] = hasDetails &&
             await permissionService.HasActionAsync(User, AuthorizationActionCodes.PrintPurchaseOrder, cancellationToken);
+        ViewData["ReceivedByName"] = await ResolveUserNameAsync(order.ReceivedBy, cancellationToken);
         return View(order);
+    }
+
+    private async Task<string?> ResolveUserNameAsync(string? userId, CancellationToken cancellationToken)
+    {
+        if (!int.TryParse(userId, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id))
+            return userId;
+
+        var user = await dbContext.Users
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(candidate => candidate.Id == id)
+            .Select(candidate => new { candidate.Name, candidate.Surname })
+            .FirstOrDefaultAsync(cancellationToken);
+        return user is null ? userId : $"{user.Name} {user.Surname}".Trim();
     }
 
     [HttpGet]
