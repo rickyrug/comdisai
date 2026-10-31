@@ -1,0 +1,82 @@
+@model PurchaseOrderHeaderInputViewModel
+@{
+    ViewData["Title"] = "New purchase order";
+}
+
+<h1>New purchase order</h1>
+<p>The order number is assigned automatically. The order starts in Draft.</p>
+
+<form asp-action="Create" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+    <div class="mb-3">
+        <label asp-for="SupplierId" class="form-label">Supplier</label>
+        <select asp-for="SupplierId" asp-items="Model.Suppliers" class="form-select" data-searchable="true">
+            <option value="">Select a supplier</option>
+        </select>
+        <span asp-validation-for="SupplierId" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="SupplyAddress" class="form-label"></label>
+        <textarea asp-for="SupplyAddress" class="form-control" maxlength="359"></textarea>
+        <span asp-validation-for="SupplyAddress" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="SupplyDate" class="form-label"></label>
+        <input asp-for="SupplyDate" asp-format="{0:yyyy-MM-dd}" type="date" class="form-control" />
+        <span asp-validation-for="SupplyDate" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="TaxId" class="form-label">Tax</label>
+        <select asp-for="TaxId" asp-items="Model.Taxes" class="form-select">
+            <option value="">Select a tax</option>
+        </select>
+        <span asp-validation-for="TaxId" class="text-danger"></span>
+    </div>
+    <fieldset class="mb-3">
+        <legend class="fs-6">Header discounts (%)</legend>
+        <div class="row">
+            <div class="col-md-4 mb-2">
+                <label asp-for="DiscountPercent1" class="form-label">Discount 1</label>
+                <input asp-for="DiscountPercent1" class="form-control" type="number" min="0" max="100" step="0.0001" />
+                <span asp-validation-for="DiscountPercent1" class="text-danger"></span>
+            </div>
+            <div class="col-md-4 mb-2">
+                <label asp-for="DiscountPercent2" class="form-label">Discount 2</label>
+                <input asp-for="DiscountPercent2" class="form-control" type="number" min="0" max="100" step="0.0001" />
+                <span asp-validation-for="DiscountPercent2" class="text-danger"></span>
+            </div>
+            <div class="col-md-4 mb-2">
+                <label asp-for="DiscountPercent3" class="form-label">Discount 3</label>
+                <input asp-for="DiscountPercent3" class="form-control" type="number" min="0" max="100" step="0.0001" />
+                <span asp-validation-for="DiscountPercent3" class="text-danger"></span>
+            </div>
+        </div>
+    </fieldset>
+    <button type="submit" class="btn btn-primary">Create draft</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <partial name="_Select2Partial" />
+    <script>
+        (function () {
+            const addresses = @Json.Serialize(Model.SupplierAddresses);
+            const supplier = document.getElementById("SupplierId");
+            const supply = document.getElementById("SupplyAddress");
+            let lastAutoFilled = null;
+
+            function apply() {
+                const address = (addresses[supplier.value] || "").substring(0, 359);
+                const untouched = supply.value.trim() === "" || supply.value === lastAutoFilled;
+                if (address && untouched) {
+                    supply.value = address;
+                    lastAutoFilled = address;
+                }
+            }
+
+            supplier.addEventListener("change", apply);
+            apply();
+        })();
+    </script>
+}

@@ -25,6 +25,7 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<IActionPermissionService, ActionPermissionService>();
 builder.Services.AddSingleton<SalesOrderPdfService>();
+builder.Services.AddSingleton<PurchaseOrderPdfService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddDbContext<AppDbContext>(options =>

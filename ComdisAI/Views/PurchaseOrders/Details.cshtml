@@ -1,0 +1,173 @@
+@model PurchaseOrderHeader
+@{
+    ViewData["Title"] = $"Purchase Order {Model.OrderNumber}";
+}
+
+<h1>Purchase Order @Model.OrderNumber</h1>
+@if (TempData["Success"] is string success)
+{
+    <div class="alert alert-success">@success</div>
+}
+@if (TempData["Error"] is string error)
+{
+    <div class="alert alert-danger">@error</div>
+}
+@{
+    var lines = Model.Details.Select(d =>
+    {
+        var gross = d.Qty * d.Price;
+        var pct = d.DiscountPercent ?? 0m;
+        return new { Detail = d, Gross = gross, Pct = pct, Discount = gross - d.SubTotal };
+    }).ToList();
+    var grossTotal = lines.Sum(l => l.Gross);
+    var lineDiscountTotal = lines.Sum(l => l.Discount);
+    var afterLines = Model.Subtotal;
+    var d1 = afterLines * Model.DiscountPercent1 / 100m;
+    var afterD1 = afterLines - d1;
+    var d2 = afterD1 * Model.DiscountPercent2 / 100m;
+    var afterD2 = afterD1 - d2;
+    var d3 = afterD2 * Model.DiscountPercent3 / 100m;
+    var taxable = afterD2 - d3;
+    var orderDiscountTotal = d1 + d2 + d3;
+    var usd = System.Globalization.CultureInfo.GetCultureInfo("en-US");
+    string N(decimal v) => v.ToString("C2", usd);
+}
+
+<div class="row g-3 mb-4">
+<div class="col-lg-9">
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Order information</strong>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#orderInfo" aria-expanded="true" aria-controls="orderInfo">Toggle</button>
+    </div>
+    <div class="collapse show" id="orderInfo">
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <h3 class="h6 text-uppercase text-muted">Supplier &amp; supply</h3>
+                    <p class="mb-1 text-muted small">Supplier</p>
+                    <p>@Model.Supplier.Name</p>
+                    <p class="mb-1 text-muted small">Supply address</p>
+                    <p class="mb-0">@Model.SupplyAddress</p>
+                </div>
+                <div class="col-md-4">
+                    <h3 class="h6 text-uppercase text-muted">Status &amp; dates</h3>
+                    <p class="mb-1 text-muted small">Status</p>
+                    <p><span class="badge bg-secondary">@Model.Status.Name</span></p>
+                    <p class="mb-1 text-muted small">Expected supply date</p>
+                    <p class="mb-0">@Model.SupplyDate.ToString("yyyy-MM-dd")</p>
+                    @if (Model.ReceivedAtUtc is not null)
+                    {
+                        <p class="mb-1 mt-2 text-muted small">Received</p>
+                        <p class="mb-0">@Model.ReceivedAtUtc.Value.ToString("yyyy-MM-dd HH:mm 'UTC'") by @Model.ReceivedBy</p>
+                    }
+                </div>
+                <div class="col-md-4">
+                    <h3 class="h6 text-uppercase text-muted">Tax &amp; discounts</h3>
+                    <p class="mb-1 text-muted small">Tax</p>
+                    <p>@Model.Tax.Name (@((Model.Tax.Value * 100m).ToString("0.####"))%)</p>
+                    <p class="mb-1 text-muted small">Order discounts (applied in sequence)</p>
+                    <p class="mb-0">@Model.DiscountPercent1.ToString("0.####")% / @Model.DiscountPercent2.ToString("0.####")% / @Model.DiscountPercent3.ToString("0.####")%</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Products</strong>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#orderProducts" aria-expanded="true" aria-controls="orderProducts">Toggle</button>
+    </div>
+    <div class="collapse show" id="orderProducts">
+<div class="table-responsive">
+<table class="table table-striped align-middle mb-0">
+    <thead>
+        <tr>
+            <th>Product</th>
+            <th class="text-end">Qty</th>
+            <th class="text-end">Price</th>
+            <th class="text-end">Price × Qty</th>
+            <th class="text-end">Discount %</th>
+            <th class="text-end">Discount amount</th>
+            <th class="text-end">Subtotal</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var line in lines)
+        {
+            <tr>
+                <td>@line.Detail.Product.Code - @line.Detail.Product.Name</td>
+                <td class="text-end">@line.Detail.Qty.ToString("0.0000")</td>
+                <td class="text-end">@N(line.Detail.Price)</td>
+                <td class="text-end">@N(line.Gross)</td>
+                <td class="text-end">@line.Pct.ToString("0.####")%</td>
+                <td class="text-end">@(line.Discount > 0m ? "-" + N(line.Discount) : N(0m))</td>
+                <td class="text-end">@N(line.Detail.SubTotal)</td>
+            </tr>
+        }
+    </tbody>
+    <tfoot>
+        <tr class="fw-bold">
+            <td colspan="3" class="text-end">Totals</td>
+            <td class="text-end">@N(grossTotal)</td>
+            <td></td>
+            <td class="text-end">@(lineDiscountTotal > 0m ? "-" + N(lineDiscountTotal) : N(0m))</td>
+            <td class="text-end">@N(Model.Subtotal)</td>
+        </tr>
+    </tfoot>
+</table>
+</div>
+    </div>
+</div>
+
+</div>
+<div class="col-lg-3">
+<div class="card position-sticky" style="top: 1rem;">
+            <div class="card-header"><strong>Order summary</strong></div>
+            <table class="table table-sm small mb-0">
+                <tbody>
+                    <tr><td>Gross (Price × Qty)</td><td class="text-end">@N(grossTotal)</td></tr>
+                    <tr><td>Line discounts</td><td class="text-end text-danger">-@N(lineDiscountTotal)</td></tr>
+                    <tr class="fw-semibold"><td>Subtotal</td><td class="text-end">@N(Model.Subtotal)</td></tr>
+                    <tr><td>Order discount 1 (@Model.DiscountPercent1.ToString("0.####")%)</td><td class="text-end text-danger">-@N(d1)</td></tr>
+                    <tr><td>Order discount 2 (@Model.DiscountPercent2.ToString("0.####")%)</td><td class="text-end text-danger">-@N(d2)</td></tr>
+                    <tr><td>Order discount 3 (@Model.DiscountPercent3.ToString("0.####")%)</td><td class="text-end text-danger">-@N(d3)</td></tr>
+                    <tr class="fw-semibold"><td>Taxable amount</td><td class="text-end">@N(taxable)</td></tr>
+                    <tr><td>Tax (@((Model.Tax.Value * 100m).ToString("0.####"))%)</td><td class="text-end">@N(Model.TaxAmount)</td></tr>
+                    <tr class="table-primary"><td><strong>Total</strong></td><td class="text-end"><strong>@N(Model.Total)</strong></td></tr>
+                </tbody>
+            </table>
+</div>
+</div>
+</div>
+
+<div class="d-flex flex-wrap gap-2">
+    @if (ViewData["CanEdit"] is true)
+    {
+        <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model.Id">Edit</a>
+    }
+    @if (ViewData["CanApprove"] is true)
+    {
+        <form asp-action="Approve" asp-route-id="@Model.Id" method="post">
+            <button type="submit" class="btn btn-success">Approve</button>
+        </form>
+    }
+    @if (ViewData["CanSupply"] is true)
+    {
+        <form asp-action="Supply" asp-route-id="@Model.Id" method="post">
+            <button type="submit" class="btn btn-success">Mark supplied</button>
+        </form>
+    }
+    @if (ViewData["CanCancel"] is true)
+    {
+        <form asp-action="Cancel" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Cancel this purchase order?');">
+            <button type="submit" class="btn btn-danger">Cancel order</button>
+        </form>
+    }
+    @if (ViewData["CanPrint"] is true)
+    {
+        <a class="btn btn-outline-secondary" asp-action="Print" asp-route-id="@Model.Id">Download PDF (3 copies)</a>
+    }
+    <a class="btn btn-secondary" asp-action="Index">Back to list</a>
+</div>

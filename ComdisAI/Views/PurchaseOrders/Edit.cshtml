@@ -1,0 +1,282 @@
+@model PurchaseOrderEditViewModel
+@{
+    ViewData["Title"] = $"Edit {Model.OrderNumber}";
+}
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+    <h1 class="mb-0">Edit purchase order @Model.OrderNumber</h1>
+    <span class="badge text-bg-secondary">@Model.StatusName</span>
+</div>
+<p class="text-muted">Saving changes to a non-supplied order returns it to Draft. Privileged edits to a Supplied order leave it Supplied.</p>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="OrderNumber" type="hidden" />
+    <input asp-for="StatusName" type="hidden" />
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+    <div class="row g-4">
+        <div class="col-lg-9">
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Order details</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#order-details-body" aria-expanded="true" aria-controls="order-details-body">Collapse / expand</button>
+                </div>
+                <div id="order-details-body" class="collapse show">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="SupplierId" class="form-label">Supplier</label>
+                        <select asp-for="SupplierId" asp-items="Model.Suppliers" class="form-select" data-searchable="true">
+                            <option value="">Select a supplier</option>
+                        </select>
+                        <span asp-validation-for="SupplierId" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="SupplyAddress" class="form-label"></label>
+                        <textarea asp-for="SupplyAddress" class="form-control" rows="3" maxlength="359"></textarea>
+                        <span asp-validation-for="SupplyAddress" class="text-danger"></span>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="SupplyDate" class="form-label"></label>
+                            <input asp-for="SupplyDate" asp-format="{0:yyyy-MM-dd}" type="date" class="form-control" />
+                            <span asp-validation-for="SupplyDate" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="TaxId" class="form-label">Tax</label>
+                            <select asp-for="TaxId" asp-items="Model.Taxes" class="form-select">
+                                <option value="">Select a tax</option>
+                            </select>
+                            <span asp-validation-for="TaxId" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <hr />
+                    <h2 class="fs-6">Header discounts (%)</h2>
+                    <div class="row">
+                        <div class="col-4">
+                            <label asp-for="DiscountPercent1" class="form-label">Discount 1</label>
+                            <input asp-for="DiscountPercent1" class="form-control" type="number" min="0" max="100" step="0.0001" />
+                            <span asp-validation-for="DiscountPercent1" class="text-danger"></span>
+                        </div>
+                        <div class="col-4">
+                            <label asp-for="DiscountPercent2" class="form-label">Discount 2</label>
+                            <input asp-for="DiscountPercent2" class="form-control" type="number" min="0" max="100" step="0.0001" />
+                            <span asp-validation-for="DiscountPercent2" class="text-danger"></span>
+                        </div>
+                        <div class="col-4">
+                            <label asp-for="DiscountPercent3" class="form-label">Discount 3</label>
+                            <input asp-for="DiscountPercent3" class="form-control" type="number" min="0" max="100" step="0.0001" />
+                            <span asp-validation-for="DiscountPercent3" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center position-sticky top-0 bg-body" style="z-index: 1020;">
+                    <span>Products (<span id="detail-count">@Model.Details.Count</span>)</span>
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-add-detail>Add product</button>
+                </div>
+                <div class="card-body">
+                    <div asp-validation-for="Details" class="text-danger"></div>
+                    <div id="purchase-order-details">
+                        @for (var index = 0; index < Model.Details.Count; index++)
+                        {
+                            var detail = Model.Details[index];
+                            <div class="border rounded p-2 mb-2" data-detail-row>
+                                <input name="Details[@index].Id" value="@detail.Id" type="hidden" />
+                                <div class="d-flex gap-2 mb-2">
+                                    <select name="Details[@index].ProductId" class="form-select product-select" required>
+                                        <option value="">Select a product</option>
+                                        @foreach (var product in Model.Products)
+                                        {
+                                            <option value="@product.Value" selected="@(detail.ProductId.ToString() == product.Value)">@product.Text</option>
+                                        }
+                                    </select>
+                                    <button type="button" class="btn btn-outline-danger" data-remove-detail title="Remove">&times;</button>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-4">
+                                        <label class="form-label small mb-0">Quantity</label>
+                                        <input name="Details[@index].Qty" value="@detail.Qty.ToString("0.0000", System.Globalization.CultureInfo.InvariantCulture)" type="number" min="0.0001" step="0.0001" class="form-control" required />
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label small mb-0">Price</label>
+                                        <input name="Details[@index].Price" value="@detail.Price.ToString("0.0000", System.Globalization.CultureInfo.InvariantCulture)" type="number" min="0" step="0.0001" class="form-control" required />
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label small mb-0">Discount (%)</label>
+                                        <input name="Details[@index].DiscountPercent" value="@detail.DiscountPercent?.ToString("0.0000", System.Globalization.CultureInfo.InvariantCulture)" type="number" min="0" max="100" step="0.0001" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between flex-wrap gap-2 small text-muted border-top mt-2 pt-2">
+                                    <span>Qty × Price: <strong data-line-gross>$0.00</strong></span>
+                                    <span>Discount: <strong class="text-danger" data-line-discount>$0.00</strong></span>
+                                    <span>Subtotal: <strong class="text-body" data-line-subtotal>$0.00</strong></span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <button type="button" class="btn btn-outline-primary w-100" data-add-detail>Add product</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3">
+            <div class="card position-sticky" style="top: 1rem;">
+                <div class="card-header">Order summary</div>
+                <div class="card-body">
+                    @{
+                        var usd = System.Globalization.CultureInfo.GetCultureInfo("en-US");
+                        var running = Model.Subtotal;
+                        var headerDiscounts = new List<(int Number, decimal Percent, decimal Amount)>();
+                        var percents = new[] { Model.DiscountPercent1, Model.DiscountPercent2, Model.DiscountPercent3 };
+                        for (var i = 0; i < percents.Length; i++)
+                        {
+                            if (percents[i] == 0) continue;
+                            var amount = decimal.Round(running * percents[i] / 100m, 4, MidpointRounding.AwayFromZero);
+                            headerDiscounts.Add((i + 1, percents[i], amount));
+                            running -= amount;
+                        }
+                    }
+                    <div class="d-flex justify-content-between"><span>Subtotal</span><strong>@Model.Subtotal.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-US"))</strong></div>
+                    @foreach (var discount in headerDiscounts)
+                    {
+                        <div class="d-flex justify-content-between text-danger"><span>Discount @discount.Number (@discount.Percent.ToString("0.####")%)</span><strong>-@discount.Amount.ToString("C2", usd)</strong></div>
+                    }
+                    <div class="d-flex justify-content-between"><span>Tax</span><strong>@Model.TaxAmount.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-US"))</strong></div>
+                    <hr class="my-2" />
+                    <div class="d-flex justify-content-between fs-5"><span>Total</span><strong>@Model.Total.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-US"))</strong></div>
+                    <small class="text-muted">Totals are recalculated on save.</small>
+                </div>
+                <div class="card-footer d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-primary">Save order</button>
+                    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">Cancel</a>
+                    @if (ViewData["CanApprove"] is true)
+                    {
+                        <button type="submit" form="status-change-form" formaction="@Url.Action("Approve", new { id = Model.Id })" class="btn btn-success">Approve</button>
+                    }
+                    @if (ViewData["CanSupply"] is true)
+                    {
+                        <button type="submit" form="status-change-form" formaction="@Url.Action("Supply", new { id = Model.Id })" class="btn btn-success">Mark supplied</button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <template id="detail-template">
+        <div class="border rounded p-2 mb-2" data-detail-row>
+            <input name="Details[__INDEX__].Id" type="hidden" />
+            <div class="d-flex gap-2 mb-2">
+                <select name="Details[__INDEX__].ProductId" class="form-select product-select" required>
+                    <option value="">Select a product</option>
+                    @foreach (var product in Model.Products)
+                    {
+                        <option value="@product.Value">@product.Text</option>
+                    }
+                </select>
+                <button type="button" class="btn btn-outline-danger" data-remove-detail title="Remove">&times;</button>
+            </div>
+            <div class="row g-2">
+                <div class="col-4">
+                    <label class="form-label small mb-0">Quantity</label>
+                    <input name="Details[__INDEX__].Qty" type="number" min="0.0001" step="0.0001" value="1" class="form-control" required />
+                </div>
+                <div class="col-4">
+                    <label class="form-label small mb-0">Price</label>
+                    <input name="Details[__INDEX__].Price" type="number" min="0" step="0.0001" value="0" class="form-control" required />
+                </div>
+                <div class="col-4">
+                    <label class="form-label small mb-0">Discount (%)</label>
+                    <input name="Details[__INDEX__].DiscountPercent" type="number" min="0" max="100" step="0.0001" class="form-control" />
+                </div>
+            </div>
+            <div class="d-flex justify-content-between flex-wrap gap-2 small text-muted border-top mt-2 pt-2">
+                <span>Qty × Price: <strong data-line-gross>$0.00</strong></span>
+                <span>Discount: <strong class="text-danger" data-line-discount>$0.00</strong></span>
+                <span>Subtotal: <strong class="text-body" data-line-subtotal>$0.00</strong></span>
+            </div>
+        </div>
+    </template>
+</form>
+<form id="status-change-form" asp-action="Approve" asp-route-id="@Model.Id" method="post"></form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <partial name="_Select2Partial" />
+    <script>
+        (() => {
+            const detailsBody = document.getElementById("order-details-body");
+            document.querySelector("form").addEventListener("invalid", () => {
+                bootstrap.Collapse.getOrCreateInstance(detailsBody, { toggle: false }).show();
+            }, true);
+            const body = document.getElementById("purchase-order-details");
+            const template = document.getElementById("detail-template");
+
+            function initProductSelect($select) {
+                $select.select2({
+                    theme: "bootstrap-5",
+                    width: "100%",
+                    placeholder: "Select a product",
+                    allowClear: true,
+                    language: { noResults: () => "No products found" }
+                });
+                $select.on("select2:open", () => {
+                    const field = document.querySelector(".select2-container--open .select2-search__field");
+                    if (field) field.focus();
+                });
+            }
+
+            $(body).find("select.product-select").each(function () { initProductSelect($(this)); });
+
+            function reindexRows() {
+                body.querySelectorAll("[data-detail-row]").forEach((row, index) => {
+                    row.querySelectorAll("[name]").forEach(input => {
+                        input.name = input.name.replace(/Details\[\d+\]/, `Details[${index}]`);
+                    });
+                });
+            }
+
+            const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+            function updateLine(row) {
+                const val = name => parseFloat(row.querySelector(`[name$=".${name}"]`).value) || 0;
+                const gross = val("Qty") * val("Price");
+                const discount = gross * val("DiscountPercent") / 100;
+                row.querySelector("[data-line-gross]").textContent = money.format(gross);
+                row.querySelector("[data-line-discount]").textContent = money.format(discount);
+                row.querySelector("[data-line-subtotal]").textContent = money.format(gross - discount);
+            }
+            body.querySelectorAll("[data-detail-row]").forEach(updateLine);
+            body.addEventListener("input", event => {
+                const row = event.target.closest("[data-detail-row]");
+                if (row) updateLine(row);
+            });
+
+            const counter = document.getElementById("detail-count");
+            const updateCount = () => counter.textContent = body.querySelectorAll("[data-detail-row]").length;
+
+            document.querySelectorAll("[data-add-detail]").forEach(button => button.addEventListener("click", () => {
+                const index = body.querySelectorAll("[data-detail-row]").length;
+                const wrapper = document.createElement("div");
+                wrapper.innerHTML = template.innerHTML.replaceAll("__INDEX__", index);
+                const row = wrapper.firstElementChild;
+                body.appendChild(row);
+                updateLine(row);
+                const $select = $(row).find("select.product-select");
+                initProductSelect($select);
+                updateCount();
+                row.scrollIntoView({ behavior: "smooth", block: "center" });
+                $select.select2("open");
+            }));
+
+            body.addEventListener("click", event => {
+                if (event.target.closest("[data-remove-detail]")) {
+                    event.target.closest("[data-detail-row]").remove();
+                    reindexRows();
+                    updateCount();
+                }
+            });
+        })();
+    </script>
+}
