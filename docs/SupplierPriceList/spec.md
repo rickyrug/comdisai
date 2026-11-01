@@ -28,3 +28,11 @@ Inside the supplier catalog, http://localhost:5129/Suppliers, we need to add a n
 - Existing line prices are not changed on initial page load or save.
 
 
+
+# Supplier price history
+
+- `SupplierPriceHistory` stores an initial price and each subsequent price change for a supplier/product pair (previous price empty for the initial record, new price, standard audit fields).
+- History is appended in the same save as the price-list entry; unchanged saves create no history. Reassigning to a different product records a new initial price.
+- History is retained if the price-list entry is deleted.
+- The Edit screen shows the pair's history chronologically.
+- Migration `SupplierPriceHistory` must be applied with `dotnet ef database update`.

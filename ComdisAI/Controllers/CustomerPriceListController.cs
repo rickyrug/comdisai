@@ -127,6 +127,7 @@ public class CustomerPriceListController(IUnitOfWork unitOfWork) : Controller
             return NotFound();
 
         input.Id = id;
+        input.ProductId = item.ProductId;
         input.CustomerId = item.CustomerId;
         input.CustomerName = customer.Name;
         await ValidateAsync(input, item, cancellationToken);
