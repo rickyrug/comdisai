@@ -68,6 +68,7 @@ public static class AuthorizationSeeder
         (AuthorizationActionCodes.DeleteUser, "Delete users"),
         (AuthorizationActionCodes.AssignUserRoles, "Assign user roles"),
         (AuthorizationActionCodes.ResetUserPassword, "Reset user passwords"),
+        (AuthorizationActionCodes.ViewLogs, "View application logs"),
         (AuthorizationActionCodes.ViewSalesOrder, "View sales orders"),
         (AuthorizationActionCodes.CreateSalesOrder, "Create sales orders"),
         (AuthorizationActionCodes.EditSalesOrder, "Edit sales orders"),

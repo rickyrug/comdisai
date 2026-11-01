@@ -93,6 +93,12 @@ public sealed class AuthorizationLayerTests
         Assert.Equal(actionCount, await database.Context.Actions.CountAsync());
         Assert.Equal(assignmentCount, await database.Context.RoleActions.CountAsync());
         Assert.Single(await database.Context.UserRoles.ToListAsync());
+        var viewLogsAction = await database.Context.Actions
+            .SingleAsync(action => action.Code == AuthorizationActionCodes.ViewLogs);
+        var adminRole = await database.Context.Roles
+            .SingleAsync(role => role.Code == AuthorizationSeeder.AdminRoleCode);
+        Assert.True(await database.Context.RoleActions.AnyAsync(
+            roleAction => roleAction.RoleId == adminRole.Id && roleAction.ActionId == viewLogsAction.Id));
     }
 
     private static ClaimsPrincipal Principal(int userId, int roleId) =>

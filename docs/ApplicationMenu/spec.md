@@ -16,5 +16,6 @@ The application uses a shared top navigation that remains available throughout t
     - Actions
     - Roles
     - Users
+  - Application Logs
 
 Navigation links are shown only when the selected active role grants the corresponding view action. A dropdown group is hidden when none of its destinations are available to that role. The existing sign-in, active-role, role-switch, and sign-out controls remain available; Privacy remains in the footer.
