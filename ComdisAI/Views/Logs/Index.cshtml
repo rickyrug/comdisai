@@ -1,0 +1,127 @@
+@model ComdisAI.ViewModels.Logs.LogViewerViewModel
+
+@{
+    ViewData["Title"] = "Application Logs";
+    var previousPage = Model.Page - 1;
+    var nextPage = Model.Page + 1;
+    var previousUrl = Url.Action("Index", new
+    {
+        searchText = Model.SearchText,
+        level = Model.Level,
+        fromDate = Model.FromDate?.ToString("yyyy-MM-dd"),
+        toDate = Model.ToDate?.ToString("yyyy-MM-dd"),
+        page = previousPage,
+        pageSize = Model.PageSize
+    });
+    var nextUrl = Url.Action("Index", new
+    {
+        searchText = Model.SearchText,
+        level = Model.Level,
+        fromDate = Model.FromDate?.ToString("yyyy-MM-dd"),
+        toDate = Model.ToDate?.ToString("yyyy-MM-dd"),
+        page = nextPage,
+        pageSize = Model.PageSize
+    });
+}
+
+<h1>Application Logs</h1>
+
+<form asp-action="Index" method="get" class="row g-3 align-items-end mb-4">
+    <div class="col-sm-4">
+        <label for="searchText" class="form-label">Search logs</label>
+        <input id="searchText"
+               name="SearchText"
+               type="search"
+               value="@Model.SearchText"
+               maxlength="@ComdisAI.Services.LogViewerService.MaximumSearchLength"
+               class="form-control"
+               placeholder="Search messages and exceptions" />
+    </div>
+    <div class="col-sm-2">
+        <label for="level" class="form-label">Level</label>
+        <select id="level" name="Level" class="form-select">
+            <option value="" selected="@(string.IsNullOrEmpty(Model.Level))">All levels</option>
+            <option value="Verbose" selected="@(Model.Level == "Verbose")">Verbose</option>
+            <option value="Debug" selected="@(Model.Level == "Debug")">Debug</option>
+            <option value="Information" selected="@(Model.Level == "Information")">Information</option>
+            <option value="Warning" selected="@(Model.Level == "Warning")">Warning</option>
+            <option value="Error" selected="@(Model.Level == "Error")">Error</option>
+            <option value="Fatal" selected="@(Model.Level == "Fatal")">Fatal</option>
+        </select>
+    </div>
+    <div class="col-sm-2">
+        <label for="fromDate" class="form-label">From date (UTC)</label>
+        <input id="fromDate" name="FromDate" type="date" value="@Model.FromDate?.ToString("yyyy-MM-dd")" class="form-control" />
+    </div>
+    <div class="col-sm-2">
+        <label for="toDate" class="form-label">To date (UTC)</label>
+        <input id="toDate" name="ToDate" type="date" value="@Model.ToDate?.ToString("yyyy-MM-dd")" class="form-control" />
+    </div>
+    <div class="col-sm-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Filter</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
+    </div>
+</form>
+
+<p class="text-muted">
+    Showing @Model.Entries.Count of @Model.TotalEntries matching entries. The viewer is capped at the most recent 10,000 matches.
+</p>
+
+@if (Model.Entries.Count == 0)
+{
+    <p>No log entries match these filters.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Level</th>
+                    <th>Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var entry in Model.Entries)
+                {
+                    <tr>
+                        <td class="text-nowrap">
+                            <time datetime="@entry.Timestamp.ToUniversalTime().ToString("O")" data-client-time>
+                                @entry.Timestamp.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss.fff 'UTC'")
+                            </time>
+                        </td>
+                        <td>@entry.Level</td>
+                        <td>
+                            <div class="text-break">@entry.Message</div>
+                            @if (!string.IsNullOrEmpty(entry.Exception))
+                            {
+                                <details class="mt-1">
+                                    <summary>Exception details</summary>
+                                    <pre class="small text-break">@entry.Exception</pre>
+                                </details>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Log viewer pages">
+        <ul class="pagination">
+            <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                <a class="page-link" href="@(Model.Page <= 1 ? null : previousUrl)" aria-label="Previous page">Previous</a>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link">Page @Model.Page of @Model.TotalPages</span>
+            </li>
+            <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" href="@(Model.Page >= Model.TotalPages ? null : nextUrl)" aria-label="Next page">Next</a>
+            </li>
+        </ul>
+    </nav>
+}

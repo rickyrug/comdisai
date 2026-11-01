@@ -78,3 +78,25 @@ document.querySelectorAll("[data-user-search]").forEach((searchInput) => {
         noMatchesMessage.hidden = visibleCount > 0;
     });
 });
+
+document.querySelectorAll("time[data-client-time]").forEach((timeElement) => {
+    const timestamp = new Date(timeElement.dateTime);
+    if (Number.isNaN(timestamp.getTime())) {
+        return;
+    }
+
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    timeElement.textContent = new Intl.DateTimeFormat(undefined, {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        fractionalSecondDigits: 3,
+        timeZoneName: "short"
+    }).format(timestamp);
+    if (timeZone) {
+        timeElement.title = `Time zone: ${timeZone}`;
+    }
+});
