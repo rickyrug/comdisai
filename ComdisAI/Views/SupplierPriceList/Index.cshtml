@@ -1,0 +1,66 @@
+@model ComdisAI.ViewModels.SupplierPriceLists.SupplierPriceListIndexViewModel
+
+@{
+    ViewData["Title"] = "Supplier price list";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Price list: @Model.Supplier.Name</h1>
+    <div>
+        <a asp-action="Create" asp-route-supplierId="@Model.Supplier.Id" class="btn btn-primary">Add price</a>
+        <a asp-controller="Suppliers" asp-action="Index" class="btn btn-secondary">Back to suppliers</a>
+    </div>
+</div>
+
+@if (Model.Items.Count == 0)
+{
+    <p>No prices have been defined for this supplier yet.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Product</th>
+                    <th class="text-end">Price</th>
+                    <th>Created</th>
+                    <th>Created by</th>
+                    <th>Updated</th>
+                    <th>Updated by</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Items)
+                {
+                    <tr>
+                        <td>@item.Product.Code</td>
+                        <td>@item.Product.Name</td>
+                        <td class="text-end">@item.Price.ToString("N4", System.Globalization.CultureInfo.InvariantCulture)</td>
+                        <td class="text-nowrap"><time data-utc="@item.CreatedAtUtc.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", System.Globalization.CultureInfo.InvariantCulture)">@item.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</time></td>
+                        <td>@Model.UserName(item.CreatedBy)</td>
+                        <td class="text-nowrap"><time data-utc="@item.UpdatedAtUtc.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", System.Globalization.CultureInfo.InvariantCulture)">@item.UpdatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</time></td>
+                        <td>@Model.UserName(item.UpdatedBy)</td>
+                        <td class="text-end text-nowrap">
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary" title="Edit" aria-label="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325"/></svg></a>
+                            <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline" onsubmit="return confirm('Delete this price?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete" aria-label="Delete"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg></button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        document.querySelectorAll("time[data-utc]").forEach(el => {
+            const date = new Date(el.dataset.utc);
+            if (!isNaN(date)) el.textContent = date.toLocaleString([], { dateStyle: "short", timeStyle: "short" });
+        });
+    </script>
+}

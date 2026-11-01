@@ -158,6 +158,44 @@ public sealed class PurchaseOrderTests
     }
 
     [Fact]
+    public async Task Edit_options_include_supplier_product_prices_for_supplier_switching()
+    {
+        using var database = await CreateDatabaseAsync();
+        var setup = await SeedPurchaseOrderLookupsAsync(database.Context);
+        var secondSupplier = new Supplier
+        {
+            Name = "Second Supplier",
+            Address = "Second address",
+            RFC = "RFC456",
+            BankId = setup.Supplier.BankId,
+            BankAccount = "654321"
+        };
+        database.Context.Suppliers.Add(secondSupplier);
+        database.Context.SupplierPriceLists.AddRange(
+            new SupplierPriceList
+            {
+                Supplier = setup.Supplier,
+                Product = setup.Product,
+                Price = 9.5m
+            },
+            new SupplierPriceList
+            {
+                Supplier = secondSupplier,
+                Product = setup.Product,
+                Price = 7m
+            });
+        await database.Context.SaveChangesAsync();
+        var order = await AddOrderAsync(database.Context, setup, setup.Statuses["Draft"]);
+
+        var result = await CreateController(database.Context, AuthorizationActionCodes.EditPurchaseOrder)
+            .Edit(order.Id, CancellationToken.None);
+
+        var model = Assert.IsType<PurchaseOrderEditViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Equal("9.5", model.SupplierPrices[setup.Supplier.Id.ToString()][setup.Product.Id.ToString()]);
+        Assert.Equal("7", model.SupplierPrices[secondSupplier.Id.ToString()][setup.Product.Id.ToString()]);
+    }
+
+    [Fact]
     public async Task Editing_approved_order_resets_to_draft_and_hard_deletes_removed_lines()
     {
         using var database = await CreateDatabaseAsync();
@@ -377,6 +415,7 @@ public sealed class PurchaseOrderTests
 
         var headerColumns = await ReadColumnNamesAsync(connection, "PurchaseOrderHeaders");
         var detailColumns = await ReadColumnNamesAsync(connection, "PurchaseOrderDetails");
+        var supplierPriceColumns = await ReadColumnNamesAsync(connection, "SupplierPriceList");
         Assert.Contains("OrderNumber", headerColumns);
         Assert.Contains("DiscountPercent3", headerColumns);
         Assert.Contains("CreatedAtUtc", headerColumns);
@@ -385,6 +424,11 @@ public sealed class PurchaseOrderTests
         Assert.Contains("ReceivedBy", headerColumns);
         Assert.Contains("DiscountPercent", detailColumns);
         Assert.Contains("CreatedBy", detailColumns);
+        Assert.Contains("SupplierId", supplierPriceColumns);
+        Assert.Contains("ProductId", supplierPriceColumns);
+        Assert.Contains("Price", supplierPriceColumns);
+        Assert.Contains("CreatedAtUtc", supplierPriceColumns);
+        Assert.Contains("UpdatedBy", supplierPriceColumns);
         Assert.False(await TableExistsAsync(connection, "Orders"));
     }
 
@@ -402,6 +446,10 @@ public sealed class PurchaseOrderTests
         Assert.Contains(AuthorizationActionCodes.ViewPurchaseOrder, codes);
         Assert.Contains(AuthorizationActionCodes.ApprovePurchaseOrder, codes);
         Assert.Contains(AuthorizationActionCodes.EditSuppliedPurchaseOrder, codes);
+        Assert.Contains(AuthorizationActionCodes.ViewSupplierPriceList, codes);
+        Assert.Contains(AuthorizationActionCodes.CreateSupplierPriceList, codes);
+        Assert.Contains(AuthorizationActionCodes.EditSupplierPriceList, codes);
+        Assert.Contains(AuthorizationActionCodes.DeleteSupplierPriceList, codes);
     }
 
     private static async Task<(Supplier Supplier, Tax Tax, Dictionary<string, Status> Statuses, Product Product)>

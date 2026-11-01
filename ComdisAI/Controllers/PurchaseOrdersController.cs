@@ -557,6 +557,15 @@ public class PurchaseOrdersController(
                 product.Code + " - " + product.Name + (product.IsDeleted ? " (inactive)" : string.Empty),
                 product.Id.ToString(CultureInfo.InvariantCulture)))
             .ToList();
+        model.SupplierPrices = (await dbContext.SupplierPriceLists
+                .AsNoTracking()
+                .ToListAsync(cancellationToken))
+            .GroupBy(price => price.SupplierId)
+            .ToDictionary(
+                group => group.Key.ToString(CultureInfo.InvariantCulture),
+                group => group.ToDictionary(
+                    price => price.ProductId.ToString(CultureInfo.InvariantCulture),
+                    price => price.Price.ToString("0.####", CultureInfo.InvariantCulture)));
     }
 
     private async Task<Dictionary<string, Status>?> GetRequiredStatusesAsync(
