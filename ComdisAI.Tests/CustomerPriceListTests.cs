@@ -70,6 +70,11 @@ public sealed class CustomerPriceListTests
             CancellationToken.None);
         Assert.IsType<RedirectToActionResult>(created);
         var item = await context.CustomerPriceLists.AsNoTracking().SingleAsync();
+        var initialHistory = await context.CustomerPriceHistories.AsNoTracking().SingleAsync();
+        Assert.Equal(customer.Id, initialHistory.CustomerId);
+        Assert.Equal(product.Id, initialHistory.ProductId);
+        Assert.Null(initialHistory.PreviousPrice);
+        Assert.Equal(5m, initialHistory.NewPrice);
 
         var duplicate = await controller.Create(
             customer.Id,
@@ -84,8 +89,46 @@ public sealed class CustomerPriceListTests
             new CustomerPriceListInputViewModel { ProductId = product.Id, Price = 7m },
             CancellationToken.None);
         Assert.Equal(7m, (await context.CustomerPriceLists.AsNoTracking().SingleAsync()).Price);
+        var changedHistory = await context.CustomerPriceHistories.AsNoTracking()
+            .OrderBy(history => history.Id)
+            .ToListAsync();
+        Assert.Equal(2, changedHistory.Count);
+        Assert.Equal(5m, changedHistory[1].PreviousPrice);
+        Assert.Equal(7m, changedHistory[1].NewPrice);
+
+        var editResult = Assert.IsType<ViewResult>(await controller.Edit(item.Id, CancellationToken.None));
+        var editModel = Assert.IsType<CustomerPriceListInputViewModel>(editResult.Model);
+        Assert.Equal(2, editModel.History.Count);
+
+        controller.ModelState.Clear();
+        await controller.Edit(
+            item.Id,
+            new CustomerPriceListInputViewModel { ProductId = product.Id, Price = 7m },
+            CancellationToken.None);
+        Assert.Equal(2, await context.CustomerPriceHistories.CountAsync());
+
+        var secondProduct = new Product
+        {
+            Name = "Another item",
+            Code = "2",
+            UomId = product.UomId,
+            ProductCategoryId = product.ProductCategoryId
+        };
+        context.Products.Add(secondProduct);
+        await context.SaveChangesAsync();
+        await controller.Edit(
+            item.Id,
+            new CustomerPriceListInputViewModel { ProductId = secondProduct.Id, Price = 7m },
+            CancellationToken.None);
+        var reassignmentHistory = await context.CustomerPriceHistories.AsNoTracking()
+            .OrderBy(history => history.Id)
+            .ToListAsync();
+        Assert.Equal(3, reassignmentHistory.Count);
+        Assert.Equal(secondProduct.Id, reassignmentHistory[2].ProductId);
+        Assert.Null(reassignmentHistory[2].PreviousPrice);
 
         await controller.Delete(item.Id, CancellationToken.None);
         Assert.Empty(await context.CustomerPriceLists.ToListAsync());
+        Assert.Equal(3, await context.CustomerPriceHistories.CountAsync());
     }
 }

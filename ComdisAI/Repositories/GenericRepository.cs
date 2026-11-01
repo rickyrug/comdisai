@@ -14,6 +14,11 @@ public class GenericRepository<T>(AppDbContext context) : IGenericRepository<T> 
     public async Task<IReadOnlyList<T>> GetAllAsync(CancellationToken cancellationToken = default) =>
         await _set.AsNoTracking().ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<T>> GetAllAsync(
+        Expression<Func<T, bool>> predicate,
+        CancellationToken cancellationToken = default) =>
+        await _set.AsNoTracking().Where(predicate).ToListAsync(cancellationToken);
+
     public async Task<T?> GetFirstOrDefaultAsync(
         Expression<Func<T, bool>> predicate,
         CancellationToken cancellationToken = default) =>

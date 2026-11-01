@@ -70,11 +70,19 @@ public class CustomerPriceListController(IUnitOfWork unitOfWork) : Controller
             return View(input);
         }
 
-        await unitOfWork.Repository<CustomerPriceList>().AddAsync(new CustomerPriceList
+        var item = new CustomerPriceList
         {
             CustomerId = customerId,
             ProductId = input.ProductId!.Value,
             Price = input.Price!.Value
+        };
+        await unitOfWork.Repository<CustomerPriceList>().AddAsync(item, cancellationToken);
+        await unitOfWork.Repository<CustomerPriceHistory>().AddAsync(new CustomerPriceHistory
+        {
+            CustomerId = customerId,
+            ProductId = item.ProductId,
+            PreviousPrice = null,
+            NewPrice = item.Price
         }, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return RedirectToAction(nameof(Index), new { customerId });
@@ -98,6 +106,7 @@ public class CustomerPriceListController(IUnitOfWork unitOfWork) : Controller
             ProductId = item.ProductId,
             Price = item.Price
         };
+        await PopulateHistoryAsync(model, item.CustomerId, item.ProductId, cancellationToken);
         await PopulateProductsAsync(model, item.ProductId, cancellationToken);
         return View(model);
     }
@@ -123,13 +132,27 @@ public class CustomerPriceListController(IUnitOfWork unitOfWork) : Controller
         await ValidateAsync(input, item, cancellationToken);
         if (!ModelState.IsValid)
         {
+            await PopulateHistoryAsync(input, item.CustomerId, item.ProductId, cancellationToken);
             await PopulateProductsAsync(input, item.ProductId, cancellationToken);
             return View(input);
         }
 
-        item.ProductId = input.ProductId!.Value;
-        item.Price = input.Price!.Value;
+        var productChanged = item.ProductId != input.ProductId!.Value;
+        var priceChanged = item.Price != input.Price!.Value;
+        var previousPrice = item.Price;
+        item.ProductId = input.ProductId.Value;
+        item.Price = input.Price.Value;
         unitOfWork.Repository<CustomerPriceList>().Update(item);
+        if (productChanged || priceChanged)
+        {
+            await unitOfWork.Repository<CustomerPriceHistory>().AddAsync(new CustomerPriceHistory
+            {
+                CustomerId = item.CustomerId,
+                ProductId = item.ProductId,
+                PreviousPrice = productChanged ? null : previousPrice,
+                NewPrice = item.Price
+            }, cancellationToken);
+        }
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return RedirectToAction(nameof(Index), new { customerId = item.CustomerId });
     }
@@ -150,6 +173,32 @@ public class CustomerPriceListController(IUnitOfWork unitOfWork) : Controller
 
     private async Task<IReadOnlyList<Product>> LoadProductsAsync(CancellationToken cancellationToken) =>
         (await unitOfWork.Repository<Product>().GetAllAsync(cancellationToken)).ToList();
+
+    private async Task<IReadOnlyList<CustomerPriceHistory>> LoadHistoryAsync(
+        int customerId,
+        int productId,
+        CancellationToken cancellationToken) =>
+        (await unitOfWork.Repository<CustomerPriceHistory>()
+            .GetAllAsync(history => history.CustomerId == customerId && history.ProductId == productId, cancellationToken))
+            .OrderBy(history => history.CreatedAtUtc)
+            .ThenBy(history => history.Id)
+            .ToList();
+
+    private async Task PopulateHistoryAsync(
+        CustomerPriceListInputViewModel model,
+        int customerId,
+        int productId,
+        CancellationToken cancellationToken)
+    {
+        model.History = await LoadHistoryAsync(customerId, productId, cancellationToken);
+        model.UserNames = await LoadUserNamesAsync(cancellationToken);
+    }
+
+    private async Task<IReadOnlyDictionary<string, string>> LoadUserNamesAsync(CancellationToken cancellationToken) =>
+        (await unitOfWork.Repository<User>().GetAllAsync(cancellationToken))
+            .ToDictionary(
+                user => user.Id.ToString(CultureInfo.InvariantCulture),
+                user => $"{user.Name} {user.Surname}".Trim());
 
     private async Task ValidateAsync(
         CustomerPriceListInputViewModel input,
