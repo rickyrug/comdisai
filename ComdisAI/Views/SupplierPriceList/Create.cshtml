@@ -1,0 +1,18 @@
+@model ComdisAI.ViewModels.SupplierPriceLists.SupplierPriceListInputViewModel
+
+@{
+    ViewData["Title"] = "Add supplier price";
+}
+
+<h1>Add supplier price</h1>
+<form asp-action="Create" asp-route-supplierId="@Model.SupplierId" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <partial name="_Form" model="Model" />
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a asp-action="Index" asp-route-supplierId="@Model.SupplierId" class="btn btn-secondary">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <partial name="_Select2Partial" />
+}

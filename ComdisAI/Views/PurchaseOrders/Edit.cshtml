@@ -211,6 +211,8 @@
         (() => {
             const detailsBody = document.getElementById("order-details-body");
             const collapseIcon = document.querySelector("[data-collapse-icon]");
+            const supplier = document.getElementById("SupplierId");
+            const supplierPrices = @Json.Serialize(Model.SupplierPrices);
             detailsBody.addEventListener("hide.bs.collapse", () => collapseIcon.style.transform = "rotate(-90deg)");
             detailsBody.addEventListener("show.bs.collapse", () => collapseIcon.style.transform = "");
             document.querySelector("form").addEventListener("invalid", () => {
@@ -230,6 +232,9 @@
                 $select.on("select2:open", () => {
                     const field = document.querySelector(".select2-container--open .select2-search__field");
                     if (field) field.focus();
+                });
+                $select.on("select2:select select2:clear", () => {
+                    $select[0].dispatchEvent(new Event("change", { bubbles: true }));
                 });
             }
 
@@ -252,10 +257,27 @@
                 row.querySelector("[data-line-discount]").textContent = money.format(discount);
                 row.querySelector("[data-line-subtotal]").textContent = money.format(gross - discount);
             }
+
+            function applySupplierPrice(row) {
+                const product = row.querySelector(".product-select");
+                const price = supplierPrices[supplier.value]?.[product.value];
+                if (price !== undefined) {
+                    row.querySelector(`[name$=".Price"]`).value = price;
+                    updateLine(row);
+                }
+            }
+
             body.querySelectorAll("[data-detail-row]").forEach(updateLine);
             body.addEventListener("input", event => {
                 const row = event.target.closest("[data-detail-row]");
                 if (row) updateLine(row);
+            });
+            body.addEventListener("change", event => {
+                const row = event.target.closest("[data-detail-row]");
+                if (row && event.target.matches(".product-select")) applySupplierPrice(row);
+            });
+            supplier.addEventListener("change", () => {
+                body.querySelectorAll("[data-detail-row]").forEach(applySupplierPrice);
             });
 
             const counter = document.getElementById("detail-count");

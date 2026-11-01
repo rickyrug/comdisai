@@ -14,4 +14,6 @@ public class PurchaseOrderEditViewModel : PurchaseOrderHeaderInputViewModel
     public string? ReceivedBy { get; set; }
     public List<PurchaseOrderDetailInputViewModel> Details { get; set; } = [];
     public IReadOnlyList<SelectListItem> Products { get; set; } = [];
+    public IReadOnlyDictionary<string, Dictionary<string, string>> SupplierPrices { get; set; } =
+        new Dictionary<string, Dictionary<string, string>>();
 }
