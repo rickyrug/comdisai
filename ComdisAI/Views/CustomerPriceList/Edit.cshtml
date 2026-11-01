@@ -1,0 +1,18 @@
+@model ComdisAI.ViewModels.CustomerPriceLists.CustomerPriceListInputViewModel
+
+@{
+    ViewData["Title"] = "Edit price";
+}
+
+<h1>Edit price</h1>
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <partial name="_Form" model="Model" />
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a asp-action="Index" asp-route-customerId="@Model.CustomerId" class="btn btn-secondary">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <partial name="_Select2Partial" />
+}

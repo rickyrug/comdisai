@@ -533,6 +533,15 @@ public class SalesOrdersController(
             .AsNoTracking()
             .OrderBy(product => product.Name)
             .ToListAsync(cancellationToken);
+        model.CustomerPrices = (await dbContext.CustomerPriceLists
+            .AsNoTracking()
+            .ToListAsync(cancellationToken))
+            .GroupBy(price => price.CustomerId)
+            .ToDictionary(
+                group => group.Key.ToString(CultureInfo.InvariantCulture),
+                group => group.ToDictionary(
+                    price => price.ProductId.ToString(CultureInfo.InvariantCulture),
+                    price => price.Price.ToString("0.####", CultureInfo.InvariantCulture)));
         model.Products = products
             .Select(product => new SelectListItem(
                 product.Code + " - " + product.Name + (product.IsDeleted ? " (inactive)" : string.Empty),
