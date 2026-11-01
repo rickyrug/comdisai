@@ -76,6 +76,13 @@ public class SupplierPriceListController(IUnitOfWork unitOfWork) : Controller
             ProductId = input.ProductId!.Value,
             Price = input.Price!.Value
         }, cancellationToken);
+        await unitOfWork.Repository<SupplierPriceHistory>().AddAsync(new SupplierPriceHistory
+        {
+            SupplierId = supplierId,
+            ProductId = input.ProductId.Value,
+            PreviousPrice = null,
+            NewPrice = input.Price.Value
+        }, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return RedirectToAction(nameof(Index), new { supplierId });
     }
@@ -98,6 +105,7 @@ public class SupplierPriceListController(IUnitOfWork unitOfWork) : Controller
             ProductId = item.ProductId,
             Price = item.Price
         };
+        await PopulateHistoryAsync(model, item.SupplierId, item.ProductId, cancellationToken);
         await PopulateProductsAsync(model, item.ProductId, cancellationToken);
         return View(model);
     }
@@ -118,18 +126,33 @@ public class SupplierPriceListController(IUnitOfWork unitOfWork) : Controller
             return NotFound();
 
         input.Id = id;
+        input.ProductId = item.ProductId;
         input.SupplierId = item.SupplierId;
         input.SupplierName = supplier.Name;
         await ValidateAsync(input, item, cancellationToken);
         if (!ModelState.IsValid)
         {
+            await PopulateHistoryAsync(input, item.SupplierId, item.ProductId, cancellationToken);
             await PopulateProductsAsync(input, item.ProductId, cancellationToken);
             return View(input);
         }
 
-        item.ProductId = input.ProductId!.Value;
-        item.Price = input.Price!.Value;
+        var productChanged = item.ProductId != input.ProductId!.Value;
+        var priceChanged = item.Price != input.Price!.Value;
+        var previousPrice = item.Price;
+        item.ProductId = input.ProductId.Value;
+        item.Price = input.Price.Value;
         unitOfWork.Repository<SupplierPriceList>().Update(item);
+        if (productChanged || priceChanged)
+        {
+            await unitOfWork.Repository<SupplierPriceHistory>().AddAsync(new SupplierPriceHistory
+            {
+                SupplierId = item.SupplierId,
+                ProductId = item.ProductId,
+                PreviousPrice = productChanged ? null : previousPrice,
+                NewPrice = item.Price
+            }, cancellationToken);
+        }
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return RedirectToAction(nameof(Index), new { supplierId = item.SupplierId });
     }
@@ -150,6 +173,23 @@ public class SupplierPriceListController(IUnitOfWork unitOfWork) : Controller
 
     private async Task<IReadOnlyList<Product>> LoadProductsAsync(CancellationToken cancellationToken) =>
         (await unitOfWork.Repository<Product>().GetAllAsync(cancellationToken)).ToList();
+
+    private async Task PopulateHistoryAsync(
+        SupplierPriceListInputViewModel model,
+        int supplierId,
+        int productId,
+        CancellationToken cancellationToken)
+    {
+        model.History = (await unitOfWork.Repository<SupplierPriceHistory>()
+            .GetAllAsync(history => history.SupplierId == supplierId && history.ProductId == productId, cancellationToken))
+            .OrderBy(history => history.CreatedAtUtc)
+            .ThenBy(history => history.Id)
+            .ToList();
+        model.UserNames = (await unitOfWork.Repository<User>().GetAllAsync(cancellationToken))
+            .ToDictionary(
+                user => user.Id.ToString(CultureInfo.InvariantCulture),
+                user => $"{user.Name} {user.Surname}".Trim());
+    }
 
     private async Task ValidateAsync(
         SupplierPriceListInputViewModel input,
