@@ -235,6 +235,19 @@
 
             $(body).find("select.product-select").each(function () { initProductSelect($(this)); });
 
+            const customerPrices = @Json.Serialize(Model.CustomerPrices);
+            function applyCustomerPrice(row) {
+                const customerId = document.getElementById("CustomerId").value;
+                const productId = row.querySelector("select.product-select").value;
+                const price = (customerPrices[customerId] || {})[productId];
+                if (price === undefined) return;
+                row.querySelector('[name$=".Price"]').value = price;
+                updateLine(row);
+            }
+            $(body).on("change", "select.product-select", function () {
+                applyCustomerPrice(this.closest("[data-detail-row]"));
+            });
+
             function reindexRows() {
                 body.querySelectorAll("[data-detail-row]").forEach((row, index) => {
                     row.querySelectorAll("[name]").forEach(input => {

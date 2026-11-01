@@ -1,0 +1,18 @@
+@model ComdisAI.ViewModels.CustomerPriceLists.CustomerPriceListInputViewModel
+
+<div class="mb-3">
+    <label class="form-label">Customer</label>
+    <input class="form-control" value="@Model.CustomerName" disabled />
+</div>
+<div class="mb-3">
+    <label asp-for="ProductId" class="form-label"></label>
+    <select asp-for="ProductId" asp-items="Model.Products" class="form-select" data-searchable="true" data-no-results="No products found">
+        <option value="">Select a product</option>
+    </select>
+    <span asp-validation-for="ProductId" class="text-danger"></span>
+</div>
+<div class="mb-3">
+    <label asp-for="Price" class="form-label"></label>
+    <input asp-for="Price" class="form-control" type="number" min="0" step="0.0001" />
+    <span asp-validation-for="Price" class="text-danger"></span>
+</div>

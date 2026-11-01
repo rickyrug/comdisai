@@ -15,6 +15,7 @@ public class AppDbContext(
     public DbSet<PurchaseOrderHeader> PurchaseOrderHeaders => Set<PurchaseOrderHeader>();
     public DbSet<PurchaseOrderDetail> PurchaseOrderDetails => Set<PurchaseOrderDetail>();
     public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<CustomerPriceList> CustomerPriceLists => Set<CustomerPriceList>();
     public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
     public DbSet<Status> Statuses => Set<Status>();
     public DbSet<Tax> Taxes => Set<Tax>();
@@ -36,6 +37,22 @@ public class AppDbContext(
             .WithMany()
             .HasForeignKey(customer => customer.DefaultTaxId)
             .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<CustomerPriceList>(entity =>
+        {
+            entity.Property(price => price.Price).HasPrecision(18, 4);
+            entity.HasQueryFilter(price => !price.Customer.IsDeleted && !price.Product.IsDeleted);
+            entity.HasIndex(price => new { price.CustomerId, price.ProductId })
+                .IsUnique()
+                .HasDatabaseName("IX_CustomerPriceLists_CustomerId_ProductId");
+            entity.HasOne(price => price.Customer)
+                .WithMany()
+                .HasForeignKey(price => price.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(price => price.Product)
+                .WithMany()
+                .HasForeignKey(price => price.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
         modelBuilder.Entity<Supplier>().HasQueryFilter(supplier => !supplier.IsDeleted);
         modelBuilder.Entity<Supplier>()
             .HasOne(supplier => supplier.Bank)

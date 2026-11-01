@@ -21,7 +21,7 @@
                 theme: "bootstrap-5",
                 width: "100%",
                 matcher: matcher,
-                language: dropdownTexts,
+                language: { noResults: () => $select.data("no-results") || dropdownTexts.noResults() },
                 placeholder: $select.find("option[value='']").text() || "Select",
                 allowClear: true
             });

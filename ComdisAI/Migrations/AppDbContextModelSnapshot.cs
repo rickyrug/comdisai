@@ -173,6 +173,47 @@ namespace ComdisAI.Migrations
                     b.ToTable("Customers");
                 });
 
+            modelBuilder.Entity("ComdisAI.Models.CustomerPriceList", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("CustomerId", "ProductId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_CustomerPriceLists_CustomerId_ProductId");
+
+                    b.ToTable("CustomerPriceLists");
+                });
+
             modelBuilder.Entity("ComdisAI.Models.Product", b =>
                 {
                     b.Property<int>("Id")
@@ -991,6 +1032,25 @@ namespace ComdisAI.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("DefaultTax");
+                });
+
+            modelBuilder.Entity("ComdisAI.Models.CustomerPriceList", b =>
+                {
+                    b.HasOne("ComdisAI.Models.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ComdisAI.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("ComdisAI.Models.Product", b =>
