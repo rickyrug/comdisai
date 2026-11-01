@@ -28,3 +28,12 @@ Inside the customer catalog, http://localhost:5129/Customers, we need to add a n
 - New authorization actions: `VIEW/CREATE/EDIT/DELETE_CUSTOMER_PRICE_LIST` (seeded at startup).
 - Sales order edit: choosing a product pre-fills the price from the customer's price list; the field remains editable.
 - Migration `CustomerPriceList` must be applied with `dotnet ef database update`.
+
+# Customer price history
+
+- `CustomerPriceHistory` stores an initial price and each subsequent price change for a customer/product pair, including the previous price (empty for the initial record), new price, and standard audit fields.
+- History is appended in the same save as the customer price-list entry. Saving an unchanged price creates no history event.
+- Reassigning an entry to a different product records a new initial price for that customer/product pair.
+- History is retained if its current customer price-list entry is deleted.
+- The customer price-list Edit screen shows the pair's history in chronological order.
+- Migration `CustomerPriceHistory` must be applied with `dotnet ef database update`.

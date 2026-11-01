@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using ComdisAI.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace ComdisAI.ViewModels.CustomerPriceLists;
@@ -18,4 +19,9 @@ public class CustomerPriceListInputViewModel
     public decimal? Price { get; set; }
 
     public IReadOnlyList<SelectListItem> Products { get; set; } = [];
+    public IReadOnlyList<CustomerPriceHistory> History { get; set; } = [];
+    public IReadOnlyDictionary<string, string> UserNames { get; set; } = new Dictionary<string, string>();
+
+    public string UserName(string actorId) =>
+        UserNames.TryGetValue(actorId, out var name) ? name : actorId;
 }

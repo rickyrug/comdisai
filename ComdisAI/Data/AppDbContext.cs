@@ -16,6 +16,7 @@ public class AppDbContext(
     public DbSet<PurchaseOrderDetail> PurchaseOrderDetails => Set<PurchaseOrderDetail>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<CustomerPriceList> CustomerPriceLists => Set<CustomerPriceList>();
+    public DbSet<CustomerPriceHistory> CustomerPriceHistories => Set<CustomerPriceHistory>();
     public DbSet<SupplierPriceList> SupplierPriceLists => Set<SupplierPriceList>();
     public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
     public DbSet<Status> Statuses => Set<Status>();
@@ -52,6 +53,21 @@ public class AppDbContext(
             entity.HasOne(price => price.Product)
                 .WithMany()
                 .HasForeignKey(price => price.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<CustomerPriceHistory>(entity =>
+        {
+            entity.ToTable("CustomerPriceHistory");
+            entity.Property(history => history.PreviousPrice).HasPrecision(18, 4);
+            entity.Property(history => history.NewPrice).HasPrecision(18, 4);
+            entity.HasIndex(history => new { history.CustomerId, history.ProductId, history.CreatedAtUtc, history.Id });
+            entity.HasOne(history => history.Customer)
+                .WithMany()
+                .HasForeignKey(history => history.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(history => history.Product)
+                .WithMany()
+                .HasForeignKey(history => history.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
         modelBuilder.Entity<SupplierPriceList>(entity =>
