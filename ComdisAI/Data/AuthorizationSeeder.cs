@@ -89,7 +89,12 @@ public static class AuthorizationSeeder
         (AuthorizationActionCodes.CreateCustomerPayment, "Create customer payments"),
         (AuthorizationActionCodes.EditCustomerPayment, "Edit customer payments"),
         (AuthorizationActionCodes.DeleteCustomerPayment, "Delete customer payments"),
-        (AuthorizationActionCodes.AllocateCustomerPayment, "Allocate customer payments to sales orders")
+        (AuthorizationActionCodes.AllocateCustomerPayment, "Allocate customer payments to sales orders"),
+        (AuthorizationActionCodes.ViewSupplierPayment, "View supplier payments"),
+        (AuthorizationActionCodes.CreateSupplierPayment, "Create supplier payments"),
+        (AuthorizationActionCodes.EditSupplierPayment, "Edit supplier payments"),
+        (AuthorizationActionCodes.DeleteSupplierPayment, "Delete supplier payments"),
+        (AuthorizationActionCodes.AllocateSupplierPayment, "Allocate supplier payments to purchase orders")
     ];
 
     public static async Task SeedAsync(
