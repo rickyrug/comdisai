@@ -16,7 +16,8 @@ public class SalesOrdersController(
     IUnitOfWork unitOfWork,
     AppDbContext dbContext,
     IActionPermissionService permissionService,
-    SalesOrderPdfService pdfService) : Controller
+    SalesOrderPdfService pdfService,
+    CustomerPaymentService paymentService) : Controller
 {
     private const string SalesOrderEntity = "SalesOrder";
     private const string DraftStatus = "Draft";
@@ -69,6 +70,8 @@ public class SalesOrdersController(
                 user => user.Id.ToString(CultureInfo.InvariantCulture),
                 user => $"{user.Name} {user.Surname}".Trim());
         ViewData["UserNames"] = userNames;
+        ViewData["Paid"] = await paymentService.GetPaidByOrderAsync(
+            orders.Select(order => order.Id), cancellationToken);
         ViewData["Statuses"] = new SelectList(statuses, nameof(Status.Id), nameof(Status.Name), statusId);
         ViewData["Query"] = term;
         ViewData["StatusId"] = statusId;

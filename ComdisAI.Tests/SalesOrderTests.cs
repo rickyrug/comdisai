@@ -432,7 +432,8 @@ public sealed class SalesOrderTests
             new UnitOfWork(context),
             context,
             new TestPermissionService(actionCodes),
-            new SalesOrderPdfService())
+            new SalesOrderPdfService(),
+            new CustomerPaymentService(context))
         {
             ObjectValidator = services.GetRequiredService<IObjectModelValidator>(),
             Url = new StubUrlHelper(),

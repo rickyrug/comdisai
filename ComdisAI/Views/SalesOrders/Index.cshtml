@@ -5,6 +5,7 @@
     ViewData["FullWidth"] = true;
     var statusItems = (SelectList)ViewData["Statuses"]!;
     var userNames = (IReadOnlyDictionary<string, string>)ViewData["UserNames"]!;
+    var paidByOrder = (IReadOnlyDictionary<int, decimal>)ViewData["Paid"]!;
     string UserName(string id) => userNames.TryGetValue(id, out var name) ? name : id;
 }
 
@@ -50,6 +51,8 @@
             <th>Delivery date</th>
             <th>Status</th>
             <th class="text-end">Total</th>
+            <th class="text-end">Paid</th>
+            <th class="text-end">Balance</th>
             <th>Created</th>
             <th>Created by</th>
             <th>Updated</th>
@@ -66,6 +69,8 @@
                 <td>@order.DeliveryDate.ToString("yyyy-MM-dd")</td>
                 <td>@order.Status.Name</td>
                 <td class="text-end">@order.Total.ToString("C2", CultureInfo.GetCultureInfo("en-US"))</td>
+                <td class="text-end">@paidByOrder.GetValueOrDefault(order.Id).ToString("C2", CultureInfo.GetCultureInfo("en-US"))</td>
+                <td class="text-end">@((order.Total - paidByOrder.GetValueOrDefault(order.Id)).ToString("C2", CultureInfo.GetCultureInfo("en-US")))</td>
                 <td class="text-nowrap">@order.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
                 <td>@UserName(order.CreatedBy)</td>
                 <td class="text-nowrap">@order.UpdatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>

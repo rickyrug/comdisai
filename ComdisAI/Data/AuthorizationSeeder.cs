@@ -84,7 +84,12 @@ public static class AuthorizationSeeder
         (AuthorizationActionCodes.PrintPurchaseOrder, "Print purchase order documents"),
         (AuthorizationActionCodes.SupplyPurchaseOrder, "Acknowledge supplied purchase orders"),
         (AuthorizationActionCodes.EditSuppliedPurchaseOrder, "Edit supplied purchase orders"),
-        (AuthorizationActionCodes.CancelPurchaseOrder, "Cancel purchase orders")
+        (AuthorizationActionCodes.CancelPurchaseOrder, "Cancel purchase orders"),
+        (AuthorizationActionCodes.ViewCustomerPayment, "View customer payments"),
+        (AuthorizationActionCodes.CreateCustomerPayment, "Create customer payments"),
+        (AuthorizationActionCodes.EditCustomerPayment, "Edit customer payments"),
+        (AuthorizationActionCodes.DeleteCustomerPayment, "Delete customer payments"),
+        (AuthorizationActionCodes.AllocateCustomerPayment, "Allocate customer payments to sales orders")
     ];
 
     public static async Task SeedAsync(

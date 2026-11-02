@@ -76,4 +76,9 @@ public static class AuthorizationActionCodes
     public const string SupplyPurchaseOrder = "SUPPLY_PURCHASE_ORDER";
     public const string EditSuppliedPurchaseOrder = "EDIT_SUPPLIED_PURCHASE_ORDER";
     public const string CancelPurchaseOrder = "CANCEL_PURCHASE_ORDER";
+    public const string ViewCustomerPayment = "VIEW_CUSTOMER_PAYMENT";
+    public const string CreateCustomerPayment = "CREATE_CUSTOMER_PAYMENT";
+    public const string EditCustomerPayment = "EDIT_CUSTOMER_PAYMENT";
+    public const string DeleteCustomerPayment = "DELETE_CUSTOMER_PAYMENT";
+    public const string AllocateCustomerPayment = "ALLOCATE_CUSTOMER_PAYMENT";
 }

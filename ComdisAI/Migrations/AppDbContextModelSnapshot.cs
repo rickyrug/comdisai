@@ -173,6 +173,108 @@ namespace ComdisAI.Migrations
                     b.ToTable("Customers");
                 });
 
+            modelBuilder.Entity("ComdisAI.Models.CustomerPayment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("BankId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Method")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("PaymentDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BankId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.ToTable("CustomerPayments");
+                });
+
+            modelBuilder.Entity("ComdisAI.Models.CustomerPaymentAllocation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CustomerPaymentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SalesOrderHeaderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SalesOrderHeaderId");
+
+                    b.HasIndex("CustomerPaymentId", "SalesOrderHeaderId")
+                        .IsUnique();
+
+                    b.ToTable("CustomerPaymentAllocations");
+                });
+
             modelBuilder.Entity("ComdisAI.Models.CustomerPriceHistory", b =>
                 {
                     b.Property<int>("Id")
@@ -1161,6 +1263,43 @@ namespace ComdisAI.Migrations
                     b.Navigation("DefaultTax");
                 });
 
+            modelBuilder.Entity("ComdisAI.Models.CustomerPayment", b =>
+                {
+                    b.HasOne("ComdisAI.Models.Bank", "Bank")
+                        .WithMany()
+                        .HasForeignKey("BankId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ComdisAI.Models.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Bank");
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("ComdisAI.Models.CustomerPaymentAllocation", b =>
+                {
+                    b.HasOne("ComdisAI.Models.CustomerPayment", "CustomerPayment")
+                        .WithMany("Allocations")
+                        .HasForeignKey("CustomerPaymentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ComdisAI.Models.SalesOrderHeader", "SalesOrderHeader")
+                        .WithMany()
+                        .HasForeignKey("SalesOrderHeaderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CustomerPayment");
+
+                    b.Navigation("SalesOrderHeader");
+                });
+
             modelBuilder.Entity("ComdisAI.Models.CustomerPriceHistory", b =>
                 {
                     b.HasOne("ComdisAI.Models.Customer", "Customer")
@@ -1400,6 +1539,11 @@ namespace ComdisAI.Migrations
             modelBuilder.Entity("ComdisAI.Models.Actions", b =>
                 {
                     b.Navigation("RoleActions");
+                });
+
+            modelBuilder.Entity("ComdisAI.Models.CustomerPayment", b =>
+                {
+                    b.Navigation("Allocations");
                 });
 
             modelBuilder.Entity("ComdisAI.Models.PurchaseOrderHeader", b =>

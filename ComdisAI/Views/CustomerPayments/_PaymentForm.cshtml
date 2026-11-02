@@ -1,0 +1,50 @@
+@model ComdisAI.ViewModels.CustomerPaymentInputViewModel
+@{
+    var customers = (SelectList)ViewData["Customers"]!;
+    var banks = (SelectList)ViewData["Banks"]!;
+    var methods = (List<SelectListItem>)ViewData["Methods"]!;
+}
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <label asp-for="CustomerId" class="form-label"></label>
+        <select asp-for="CustomerId" class="form-select" asp-items="customers">
+            <option value="">Select a customer</option>
+        </select>
+        <span asp-validation-for="CustomerId" class="text-danger"></span>
+    </div>
+    <div class="col-md-3">
+        <label asp-for="PaymentDate" class="form-label"></label>
+        <input asp-for="PaymentDate" type="date" class="form-control" />
+        <span asp-validation-for="PaymentDate" class="text-danger"></span>
+    </div>
+    <div class="col-md-3">
+        <label asp-for="Amount" class="form-label"></label>
+        <input asp-for="Amount" class="form-control" />
+        <span asp-validation-for="Amount" class="text-danger"></span>
+    </div>
+    <div class="col-md-3">
+        <label asp-for="Method" class="form-label"></label>
+        <select asp-for="Method" class="form-select" asp-items="methods">
+            <option value="">Select a method</option>
+        </select>
+        <span asp-validation-for="Method" class="text-danger"></span>
+    </div>
+    <div class="col-md-3">
+        <label asp-for="Reference" class="form-label"></label>
+        <input asp-for="Reference" class="form-control" maxlength="100" />
+        <span asp-validation-for="Reference" class="text-danger"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="BankId" class="form-label"></label>
+        <select asp-for="BankId" class="form-select" asp-items="banks">
+            <option value="">None</option>
+        </select>
+        <span asp-validation-for="BankId" class="text-danger"></span>
+    </div>
+    <div class="col-12">
+        <label asp-for="Notes" class="form-label"></label>
+        <textarea asp-for="Notes" class="form-control" maxlength="500" rows="2"></textarea>
+        <span asp-validation-for="Notes" class="text-danger"></span>
+    </div>
+</div>
