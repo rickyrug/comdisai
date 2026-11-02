@@ -16,6 +16,8 @@ public class AppDbContext(
     public DbSet<PurchaseOrderDetail> PurchaseOrderDetails => Set<PurchaseOrderDetail>();
     public DbSet<CustomerPayment> CustomerPayments => Set<CustomerPayment>();
     public DbSet<CustomerPaymentAllocation> CustomerPaymentAllocations => Set<CustomerPaymentAllocation>();
+    public DbSet<SupplierPayment> SupplierPayments => Set<SupplierPayment>();
+    public DbSet<SupplierPaymentAllocation> SupplierPaymentAllocations => Set<SupplierPaymentAllocation>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<CustomerPriceList> CustomerPriceLists => Set<CustomerPriceList>();
     public DbSet<CustomerPriceHistory> CustomerPriceHistories => Set<CustomerPriceHistory>();
@@ -224,6 +226,36 @@ public class AppDbContext(
             entity.HasOne(allocation => allocation.SalesOrderHeader)
                 .WithMany()
                 .HasForeignKey(allocation => allocation.SalesOrderHeaderId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<SupplierPayment>(entity =>
+        {
+            entity.Property(payment => payment.Amount).HasPrecision(18, 4);
+            entity.Property(payment => payment.Method).HasConversion<int>();
+            entity.Property(payment => payment.Reference).HasMaxLength(100);
+            entity.Property(payment => payment.Notes).HasMaxLength(500);
+            entity.HasQueryFilter(payment => !payment.IsDeleted);
+            entity.HasOne(payment => payment.Supplier)
+                .WithMany()
+                .HasForeignKey(payment => payment.SupplierId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(payment => payment.Bank)
+                .WithMany()
+                .HasForeignKey(payment => payment.BankId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<SupplierPaymentAllocation>(entity =>
+        {
+            entity.Property(allocation => allocation.Amount).HasPrecision(18, 4);
+            entity.HasIndex(allocation => new { allocation.SupplierPaymentId, allocation.PurchaseOrderHeaderId })
+                .IsUnique();
+            entity.HasOne(allocation => allocation.SupplierPayment)
+                .WithMany(payment => payment.Allocations)
+                .HasForeignKey(allocation => allocation.SupplierPaymentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(allocation => allocation.PurchaseOrderHeader)
+                .WithMany()
+                .HasForeignKey(allocation => allocation.PurchaseOrderHeaderId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
         modelBuilder.Entity<SalesOrderHeader>(entity =>
@@ -528,6 +560,11 @@ public class AppDbContext(
                 {
                     payment.DeletedAtUtc = now;
                     payment.DeletedBy = actor;
+                }
+                else if (entry.Entity is SupplierPayment { IsDeleted: true, DeletedAtUtc: null } supplierPayment)
+                {
+                    supplierPayment.DeletedAtUtc = now;
+                    supplierPayment.DeletedBy = actor;
                 }
                 else if (entry.Entity is Product { IsDeleted: true, DeletedAtUtc: null } product)
                 {

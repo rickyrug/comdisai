@@ -81,4 +81,9 @@ public static class AuthorizationActionCodes
     public const string EditCustomerPayment = "EDIT_CUSTOMER_PAYMENT";
     public const string DeleteCustomerPayment = "DELETE_CUSTOMER_PAYMENT";
     public const string AllocateCustomerPayment = "ALLOCATE_CUSTOMER_PAYMENT";
+    public const string ViewSupplierPayment = "VIEW_SUPPLIER_PAYMENT";
+    public const string CreateSupplierPayment = "CREATE_SUPPLIER_PAYMENT";
+    public const string EditSupplierPayment = "EDIT_SUPPLIER_PAYMENT";
+    public const string DeleteSupplierPayment = "DELETE_SUPPLIER_PAYMENT";
+    public const string AllocateSupplierPayment = "ALLOCATE_SUPPLIER_PAYMENT";
 }
