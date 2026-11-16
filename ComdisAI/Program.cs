@@ -85,6 +85,8 @@ await using (var scope = app.Services.CreateAsyncScope())
         scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>(),
         app.Configuration["BootstrapAdmin:Email"] ?? AuthorizationSeeder.DefaultAdminEmail,
         initialAdminPassword);
+    await scope.ServiceProvider.GetRequiredService<CustomerPaymentService>()
+        .BackfillPaidOrdersAsync(scope.ServiceProvider.GetRequiredService<ILogger<CustomerPaymentService>>());
 }
 
 // Configure the HTTP request pipeline.

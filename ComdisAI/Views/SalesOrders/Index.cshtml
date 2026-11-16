@@ -50,6 +50,7 @@
             <th>Customer</th>
             <th>Delivery date</th>
             <th>Status</th>
+            <th>Delivery</th>
             <th class="text-end">Total</th>
             <th class="text-end">Paid</th>
             <th class="text-end">Balance</th>
@@ -68,6 +69,7 @@
                 <td>@order.Customer.Name</td>
                 <td>@order.DeliveryDate.ToString("yyyy-MM-dd")</td>
                 <td>@order.Status.Name</td>
+                <td>@(order.IsDelivered == true ? "Delivered" : order.IsDelivered == false ? "Pending" : "Review required")</td>
                 <td class="text-end">@order.Total.ToString("C2", CultureInfo.GetCultureInfo("en-US"))</td>
                 <td class="text-end">@paidByOrder.GetValueOrDefault(order.Id).ToString("C2", CultureInfo.GetCultureInfo("en-US"))</td>
                 <td class="text-end">@((order.Total - paidByOrder.GetValueOrDefault(order.Id)).ToString("C2", CultureInfo.GetCultureInfo("en-US")))</td>
@@ -87,7 +89,8 @@
                             <button type="submit" class="btn btn-sm btn-success">Approve</button>
                         </form>
                     }
-                    @if (ViewData["CanDeliver"] is true && order.Status.Name == "Approved" && order.Details.Count > 0)
+                    @if (ViewData["CanDeliver"] is true && order.IsDelivered == false &&
+                        (order.Status.Name == "Approved" || order.Status.Name == "Paid") && order.Details.Count > 0)
                     {
                         <form asp-action="Deliver" asp-route-id="@order.Id" asp-route-returnTo="index" method="post" class="d-inline">
                             <button type="submit" class="btn btn-sm btn-success">Mark delivered</button>

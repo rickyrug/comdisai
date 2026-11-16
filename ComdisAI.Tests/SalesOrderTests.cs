@@ -13,6 +13,8 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using PdfSharp.Pdf.IO;
 using SQLitePCL;
@@ -226,6 +228,106 @@ public sealed class SalesOrderTests
     }
 
     [Fact]
+    public async Task Paid_order_can_be_delivered_and_then_requires_delivered_edit_permission()
+    {
+        using var database = await CreateDatabaseAsync();
+        var setup = await SeedSalesOrderLookupsAsync(database.Context);
+        var paid = new Status { Name = "Paid", Entity = "SalesOrder" };
+        database.Context.Statuses.Add(paid);
+        var order = await AddOrderAsync(database.Context, setup, setup.Statuses["Approved"]);
+        var payment = new CustomerPayment { Customer = setup.Customer, Amount = order.Total, Method = PaymentMethod.Cash };
+        database.Context.CustomerPayments.Add(payment);
+        await database.Context.SaveChangesAsync();
+        Assert.Null(await new CustomerPaymentService(database.Context).AllocateAsync(payment.Id, order.Id, order.Total));
+
+        var controller = CreateController(database.Context, AuthorizationActionCodes.DeliverSalesOrder);
+        await controller.Deliver(order.Id, null, CancellationToken.None);
+        database.Context.ChangeTracker.Clear();
+        var saved = await database.Context.SalesOrderHeaders.Include(row => row.Status).SingleAsync();
+        Assert.Equal("Paid", saved.Status.Name);
+        Assert.True(saved.IsDelivered);
+        var denied = await CreateController(database.Context, AuthorizationActionCodes.EditSalesOrder)
+            .Edit(order.Id, CancellationToken.None);
+        Assert.Equal(StatusCodes.Status403Forbidden, Assert.IsType<ViewResult>(denied).StatusCode);
+    }
+
+    [Fact]
+    public async Task Allocated_undelivered_order_cannot_be_edited_or_cancelled()
+    {
+        using var database = await CreateDatabaseAsync();
+        var setup = await SeedSalesOrderLookupsAsync(database.Context);
+        var order = await AddOrderAsync(database.Context, setup, setup.Statuses["Approved"]);
+        var payment = new CustomerPayment { Customer = setup.Customer, Amount = 1m, Method = PaymentMethod.Cash };
+        database.Context.CustomerPayments.Add(payment);
+        await database.Context.SaveChangesAsync();
+        Assert.Null(await new CustomerPaymentService(database.Context).AllocateAsync(payment.Id, order.Id, 1m));
+
+        var controller = CreateController(database.Context, AuthorizationActionCodes.EditSalesOrder, AuthorizationActionCodes.CancelSalesOrder);
+        var edit = Assert.IsType<RedirectToActionResult>(await controller.Edit(order.Id, CancellationToken.None));
+        Assert.Equal("Details", edit.ActionName);
+        await controller.Cancel(order.Id, null, CancellationToken.None);
+        Assert.Equal("Approved", order.Status.Name);
+    }
+
+    [Fact]
+    public async Task Delivered_edit_rejects_total_below_allocated_amount()
+    {
+        using var database = await CreateDatabaseAsync();
+        var setup = await SeedSalesOrderLookupsAsync(database.Context);
+        var order = await AddOrderAsync(database.Context, setup, setup.Statuses["Delivered"]);
+        var originalTotal = order.Total;
+        var payment = new CustomerPayment { Customer = setup.Customer, Amount = 10m, Method = PaymentMethod.Cash };
+        database.Context.CustomerPayments.Add(payment);
+        await database.Context.SaveChangesAsync();
+        Assert.Null(await new CustomerPaymentService(database.Context).AllocateAsync(payment.Id, order.Id, 10m));
+        var input = new SalesOrderEditViewModel
+        {
+            CustomerId = setup.Customer.Id,
+            DeliveryAddress = order.DeliveryAddress,
+            DeliveryDate = order.DeliveryDate,
+            TaxId = setup.Tax.Id,
+            Details = []
+        };
+
+        var result = await CreateController(database.Context, AuthorizationActionCodes.EditDeliveredSalesOrder)
+            .Edit(order.Id, input, CancellationToken.None);
+        Assert.IsType<ViewResult>(result);
+        database.Context.ChangeTracker.Clear();
+        Assert.Equal(originalTotal, (await database.Context.SalesOrderHeaders.SingleAsync()).Total);
+    }
+
+    [Fact]
+    public async Task Increasing_a_delivered_paid_orders_total_restores_delivered_status()
+    {
+        using var database = await CreateDatabaseAsync();
+        var setup = await SeedSalesOrderLookupsAsync(database.Context);
+        database.Context.Statuses.Add(new Status { Name = "Paid", Entity = "SalesOrder" });
+        var order = await AddOrderAsync(database.Context, setup, setup.Statuses["Delivered"]);
+        var payment = new CustomerPayment { Customer = setup.Customer, Amount = order.Total, Method = PaymentMethod.Cash };
+        database.Context.CustomerPayments.Add(payment);
+        await database.Context.SaveChangesAsync();
+        Assert.Null(await new CustomerPaymentService(database.Context).AllocateAsync(payment.Id, order.Id, order.Total));
+        var detail = order.Details.Single();
+        var input = new SalesOrderEditViewModel
+        {
+            CustomerId = setup.Customer.Id,
+            DeliveryAddress = order.DeliveryAddress,
+            DeliveryDate = order.DeliveryDate,
+            TaxId = setup.Tax.Id,
+            Details = [new SalesOrderDetailInputViewModel { Id = detail.Id, ProductId = setup.Product.Id, Qty = 3m, Price = 12.5m }]
+        };
+
+        var result = await CreateController(database.Context, AuthorizationActionCodes.EditDeliveredSalesOrder)
+            .Edit(order.Id, input, CancellationToken.None);
+        Assert.IsType<RedirectToActionResult>(result);
+        database.Context.ChangeTracker.Clear();
+        var saved = await database.Context.SalesOrderHeaders.Include(row => row.Status).SingleAsync();
+        Assert.Equal("Delivered", saved.Status.Name);
+        Assert.True(saved.IsDelivered);
+        Assert.True(saved.Total > payment.Amount);
+    }
+
+    [Fact]
     public async Task Pdf_contains_three_A5_copies()
     {
         using var database = await CreateDatabaseAsync();
@@ -339,6 +441,34 @@ public sealed class SalesOrderTests
         Assert.Contains("DiscountPercent", detailColumns);
         Assert.Contains("CreatedBy", detailColumns);
         Assert.False(await TableExistsAsync(connection, "Orders"));
+    }
+
+    [Fact]
+    public async Task Delivery_migration_preserves_existing_delivered_orders()
+    {
+        Batteries.Init();
+        await using var connection = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var context = new AppDbContext(
+            new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options, new HttpContextAccessor());
+        await context.Database.MigrateAsync();
+        var setup = await SeedSalesOrderLookupsAsync(context);
+        await AddOrderAsync(context, setup, setup.Statuses["Delivered"]);
+        var paid = new Status { Name = "Paid", Entity = "SalesOrder" };
+        context.SalesOrderHeaders.Add(new SalesOrderHeader
+        {
+            OrderNumber = "2026-00002", Customer = setup.Customer, Tax = setup.Tax,
+            Status = paid, DeliveryAddress = "Street", DeliveryDate = DateTime.Today
+        });
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+        var migrator = context.GetService<IMigrator>();
+        await migrator.MigrateAsync("20261102032517_SupplierPayments");
+        await migrator.MigrateAsync();
+
+        var orders = await context.SalesOrderHeaders.OrderBy(row => row.OrderNumber).ToListAsync();
+        Assert.True(orders[0].IsDelivered);
+        Assert.Null(orders[1].IsDelivered);
     }
 
     [Fact]

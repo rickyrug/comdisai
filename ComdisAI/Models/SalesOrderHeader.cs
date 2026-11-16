@@ -21,6 +21,7 @@ public class SalesOrderHeader : AuditableEntity
 
     public int StatusId { get; set; }
     public Status Status { get; set; } = null!;
+    public bool? IsDelivered { get; set; } = false;
 
     public int TaxId { get; set; }
     public Tax Tax { get; set; } = null!;

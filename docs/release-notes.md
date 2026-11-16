@@ -1,5 +1,10 @@
 # Release Notes
 
+## Unreleased — Paid Sales Orders
+
+- Fully allocated sales orders become Paid, with delivery tracked separately and reopened balances restoring the prior fulfillment state.
+- Apply the `SalesOrderDeliveryState` migration before startup; existing eligible orders are backfilled. Review pre-existing Paid orders with unknown delivery history as described in the sales-order specification.
+
 ## Unreleased — Status Dictionary
 
 ### Added
