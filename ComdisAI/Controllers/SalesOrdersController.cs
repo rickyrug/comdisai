@@ -23,6 +23,7 @@ public class SalesOrdersController(
     private const string DraftStatus = "Draft";
     private const string ApprovedStatus = "Approved";
     private const string DeliveredStatus = "Delivered";
+    private const string PaidStatus = "Paid";
     private const string CancelledStatus = "Cancelled";
 
     [RequireAction(AuthorizationActionCodes.ViewSalesOrder)]
@@ -94,8 +95,8 @@ public class SalesOrdersController(
             return NotFound();
 
         var hasDetails = order.Details.Count > 0;
-        var isDelivered = IsStatus(order.Status, DeliveredStatus);
-        ViewData["CanEdit"] = !IsStatus(order.Status, CancelledStatus) && await permissionService.HasActionAsync(
+        var isDelivered = IsDelivered(order);
+        ViewData["CanEdit"] = order.IsDelivered is not null && !IsStatus(order.Status, CancelledStatus) && await permissionService.HasActionAsync(
             User,
             isDelivered
                 ? AuthorizationActionCodes.EditDeliveredSalesOrder
@@ -104,7 +105,7 @@ public class SalesOrdersController(
         ViewData["CanApprove"] = hasDetails &&
             IsStatus(order.Status, DraftStatus) &&
             await permissionService.HasActionAsync(User, AuthorizationActionCodes.ApproveSalesOrder, cancellationToken);
-        ViewData["CanDeliver"] = IsStatus(order.Status, ApprovedStatus) &&
+        ViewData["CanDeliver"] = CanDeliver(order) &&
             await permissionService.HasActionAsync(User, AuthorizationActionCodes.DeliverSalesOrder, cancellationToken);
         ViewData["CanCancel"] = (IsStatus(order.Status, DraftStatus) || IsStatus(order.Status, ApprovedStatus)) &&
             await permissionService.HasActionAsync(User, AuthorizationActionCodes.CancelSalesOrder, cancellationToken);
@@ -186,6 +187,11 @@ public class SalesOrdersController(
             return NotFound();
         if (!await CanEditAsync(order, cancellationToken))
             return AccessDenied();
+        if (!IsDelivered(order) && (await paymentService.GetPaidByOrderAsync([id], cancellationToken)).GetValueOrDefault(id) > 0m)
+        {
+            TempData["Error"] = "Remove payment allocations before editing an undelivered order.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
 
         var model = MapToEditViewModel(order);
         await PopulateEditOptionsAsync(model, cancellationToken);
@@ -208,6 +214,13 @@ public class SalesOrdersController(
         if (!await CanEditAsync(order, cancellationToken))
             return AccessDenied();
 
+        var paid = (await paymentService.GetPaidByOrderAsync([id], cancellationToken)).GetValueOrDefault(id);
+        if (!IsDelivered(order) && paid > 0m)
+        {
+            TempData["Error"] = "Remove payment allocations before editing an undelivered order.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
         input.Id = id;
         ValidateHeaderInput(input);
         ValidateDetailsInput(input.Details);
@@ -218,6 +231,8 @@ public class SalesOrdersController(
             .SingleOrDefaultAsync(row => row.Id == input.CustomerId, cancellationToken);
         if (customer is null || (customer.IsDeleted && customer.Id != order.CustomerId))
             ModelState.AddModelError(nameof(input.CustomerId), "Select an active customer.");
+        if (paid > 0m && input.CustomerId != order.CustomerId)
+            ModelState.AddModelError(nameof(input.CustomerId), "Remove payment allocations before changing the customer.");
         var tax = await dbContext.Taxes
             .IgnoreQueryFilters()
             .SingleOrDefaultAsync(row => row.Id == input.TaxId, cancellationToken);
@@ -293,7 +308,7 @@ public class SalesOrdersController(
                 order.Details.Add(detail);
         }
 
-        if (!IsStatus(order.Status, DeliveredStatus))
+        if (!IsDelivered(order))
         {
             order.StatusId = statuses[DraftStatus].Id;
             order.Status = statuses[DraftStatus];
@@ -307,6 +322,25 @@ public class SalesOrdersController(
             exception is ArgumentOutOfRangeException or OverflowException)
         {
             ModelState.AddModelError(string.Empty, "Calculated amounts exceed the supported decimal(18,4) range.");
+            input.OrderNumber = order.OrderNumber;
+            input.StatusName = order.Status.Name;
+            await PopulateEditOptionsAsync(input, cancellationToken);
+            await PopulateStatusActionsAsync(order, cancellationToken);
+            return View(input);
+        }
+        if (order.Total < paid)
+        {
+            ModelState.AddModelError(string.Empty, "The order total cannot be lower than its allocated payments.");
+            input.OrderNumber = order.OrderNumber;
+            input.StatusName = order.Status.Name;
+            await PopulateEditOptionsAsync(input, cancellationToken);
+            await PopulateStatusActionsAsync(order, cancellationToken);
+            return View(input);
+        }
+        var statusError = await paymentService.ReconcileStatusAsync(order, paid, cancellationToken);
+        if (statusError is not null)
+        {
+            ModelState.AddModelError(string.Empty, statusError);
             input.OrderNumber = order.OrderNumber;
             input.StatusName = order.Status.Name;
             await PopulateEditOptionsAsync(input, cancellationToken);
@@ -354,7 +388,7 @@ public class SalesOrdersController(
         var order = await GetOrderAsync(id, cancellationToken);
         if (order is null)
             return NotFound();
-        if (!IsStatus(order.Status, ApprovedStatus) || order.Details.Count == 0)
+        if (!CanDeliver(order) || order.Details.Count == 0)
         {
             TempData["Error"] = "Only an Approved sales order with at least one line can be marked as Delivered.";
             return RedirectAfterStatusChange(id, returnTo);
@@ -367,8 +401,12 @@ public class SalesOrdersController(
             return RedirectAfterStatusChange(id, returnTo);
         }
 
-        order.StatusId = statuses[DeliveredStatus].Id;
-        order.Status = statuses[DeliveredStatus];
+        order.IsDelivered = true;
+        if (!IsStatus(order.Status, PaidStatus))
+        {
+            order.StatusId = statuses[DeliveredStatus].Id;
+            order.Status = statuses[DeliveredStatus];
+        }
         await unitOfWork.SaveChangesAsync(cancellationToken);
         TempData["Success"] = "Sales order marked as Delivered.";
         return RedirectAfterStatusChange(id, returnTo);
@@ -385,6 +423,11 @@ public class SalesOrdersController(
         if (!IsStatus(order.Status, DraftStatus) && !IsStatus(order.Status, ApprovedStatus))
         {
             TempData["Error"] = "Only a Draft or Approved sales order can be cancelled.";
+            return RedirectAfterStatusChange(id, returnTo);
+        }
+        if ((await paymentService.GetPaidByOrderAsync([id], cancellationToken)).GetValueOrDefault(id) > 0m)
+        {
+            TempData["Error"] = "Remove payment allocations before cancelling the order.";
             return RedirectAfterStatusChange(id, returnTo);
         }
 
@@ -444,10 +487,10 @@ public class SalesOrdersController(
     private async Task<bool> CanEditAsync(
         SalesOrderHeader order,
         CancellationToken cancellationToken) =>
-        !IsStatus(order.Status, CancelledStatus) &&
+        order.IsDelivered is not null && !IsStatus(order.Status, CancelledStatus) &&
         await permissionService.HasActionAsync(
             User,
-            IsStatus(order.Status, DeliveredStatus)
+            IsDelivered(order)
                 ? AuthorizationActionCodes.EditDeliveredSalesOrder
                 : AuthorizationActionCodes.EditSalesOrder,
             cancellationToken);
@@ -490,7 +533,7 @@ public class SalesOrdersController(
         ViewData["CanApprove"] = order.Details.Count > 0 &&
             IsStatus(order.Status, DraftStatus) &&
             await permissionService.HasActionAsync(User, AuthorizationActionCodes.ApproveSalesOrder, cancellationToken);
-        ViewData["CanDeliver"] = IsStatus(order.Status, ApprovedStatus) &&
+        ViewData["CanDeliver"] = CanDeliver(order) &&
             await permissionService.HasActionAsync(User, AuthorizationActionCodes.DeliverSalesOrder, cancellationToken);
     }
 
@@ -620,6 +663,13 @@ public class SalesOrdersController(
 
     private static bool IsStatus(Status status, string name) =>
         string.Equals(status.Name, name, StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsDelivered(SalesOrderHeader order) =>
+        order.IsDelivered == true || IsStatus(order.Status, DeliveredStatus);
+
+    private static bool CanDeliver(SalesOrderHeader order) =>
+        order.IsDelivered is not null && !IsDelivered(order) &&
+        (IsStatus(order.Status, ApprovedStatus) || IsStatus(order.Status, PaidStatus));
 
     private SalesOrderEditViewModel MapToEditViewModel(SalesOrderHeader order) =>
         new()

@@ -111,6 +111,14 @@ We need to print the PDF with 3 copies.
 
 The users needs to have a delivery button to acknoledge the sales order was delivered, and change the status to delivered. Once the order is delivered there is no authorization to a regular user to edit the order. If a edition is needed a special permition needs to be asigned.
 
+### Payment and delivery
+
+An Approved or Delivered order becomes Paid when positive allocations from active customer payments equal its total. Delivery is tracked separately: an order paid before delivery can still be marked delivered, and its status remains Paid. Removing an allocation or deleting a payment reopens the balance and restores Approved or Delivered. Allocations on deleted payments do not count.
+
+Remove allocations before editing or cancelling an undelivered order. Delivered orders require the existing privileged edit permission; their customer cannot change while allocations exist, and their total cannot fall below the allocated amount. A zero-total order without payments does not become Paid automatically.
+
+Apply the `SalesOrderDeliveryState` migration before starting the updated application. On startup, the application creates or restores the SalesOrder Paid status and backfills existing fully paid Approved and Delivered orders. Overallocated orders are logged for review. Existing orders already marked Paid before the migration have unknown delivery history, appear as "Review required", and cannot be edited, delivered, or have allocations removed until reviewed. After confirming each order's history, an administrator must set its `SalesOrderHeaders.IsDelivered` value to `1` for delivered or `0` for undelivered in the database. Back up the database before making manual corrections.
+
 
 
 

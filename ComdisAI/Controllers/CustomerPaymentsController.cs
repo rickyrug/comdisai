@@ -143,9 +143,12 @@ public class CustomerPaymentsController(
         if (payment is null)
             return NotFound();
 
-        payment.IsDeleted = true;
-        unitOfWork.Repository<CustomerPayment>().Update(payment);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        var error = await paymentService.DeletePaymentAsync(payment, cancellationToken);
+        if (error is not null)
+        {
+            TempData["Error"] = error;
+            return RedirectToAction(nameof(Details), new { id });
+        }
         return RedirectToAction(nameof(Index));
     }
 
@@ -175,13 +178,16 @@ public class CustomerPaymentsController(
         CancellationToken cancellationToken)
     {
         var allocation = await dbContext.CustomerPaymentAllocations
-            .SingleOrDefaultAsync(row => row.Id == allocationId && row.CustomerPaymentId == id, cancellationToken);
+            .SingleOrDefaultAsync(row => row.Id == allocationId && row.CustomerPaymentId == id &&
+                !row.CustomerPayment.IsDeleted, cancellationToken);
         if (allocation is null)
             return NotFound();
 
-        dbContext.CustomerPaymentAllocations.Remove(allocation);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        TempData["Success"] = "Allocation removed.";
+        var error = await paymentService.RemoveAllocationAsync(allocation, cancellationToken);
+        if (error is null)
+            TempData["Success"] = "Allocation removed.";
+        else
+            TempData["Error"] = error;
         return RedirectToAction(nameof(Details), new { id });
     }
 

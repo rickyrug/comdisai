@@ -803,6 +803,9 @@ namespace ComdisAI.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool?>("IsDelivered")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("OrderNumber")
                         .IsRequired()
                         .HasMaxLength(10)

@@ -54,6 +54,8 @@
                     <h3 class="h6 text-uppercase text-muted">Status &amp; dates</h3>
                     <p class="mb-1 text-muted small">Status</p>
                     <p><span class="badge bg-secondary">@Model.Status.Name</span></p>
+                    <p class="mb-1 text-muted small">Delivery</p>
+                    <p>@(Model.IsDelivered == true ? "Delivered" : Model.IsDelivered == false ? "Pending" : "Review required")</p>
                     <p class="mb-1 text-muted small">Delivery date</p>
                     <p class="mb-0">@Model.DeliveryDate.ToString("yyyy-MM-dd")</p>
                 </div>
