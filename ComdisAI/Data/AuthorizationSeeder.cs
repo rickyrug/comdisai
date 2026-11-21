@@ -70,6 +70,7 @@ public static class AuthorizationSeeder
         (AuthorizationActionCodes.ResetUserPassword, "Reset user passwords"),
         (AuthorizationActionCodes.ViewLogs, "View application logs"),
         (AuthorizationActionCodes.ViewSalesOrder, "View sales orders"),
+        (AuthorizationActionCodes.ViewSalesReport, "View sales reports"),
         (AuthorizationActionCodes.CreateSalesOrder, "Create sales orders"),
         (AuthorizationActionCodes.EditSalesOrder, "Edit sales orders"),
         (AuthorizationActionCodes.ApproveSalesOrder, "Approve sales orders"),

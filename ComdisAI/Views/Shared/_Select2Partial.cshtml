@@ -22,7 +22,7 @@
                 width: "100%",
                 matcher: matcher,
                 language: { noResults: () => $select.data("no-results") || dropdownTexts.noResults() },
-                placeholder: $select.find("option[value='']").text() || "Select",
+                placeholder: $select.data("placeholder") || $select.find("option[value='']").text() || "Select",
                 allowClear: true
             });
 

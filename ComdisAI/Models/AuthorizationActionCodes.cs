@@ -61,6 +61,7 @@ public static class AuthorizationActionCodes
     public const string ResetUserPassword = "RESET_USER_PASSWORD";
     public const string ViewLogs = "VIEW_LOGS";
     public const string ViewSalesOrder = "VIEW_SALES_ORDER";
+    public const string ViewSalesReport = "VIEW_SALES_REPORT";
     public const string CreateSalesOrder = "CREATE_SALES_ORDER";
     public const string EditSalesOrder = "EDIT_SALES_ORDER";
     public const string ApproveSalesOrder = "APPROVE_SALES_ORDER";
