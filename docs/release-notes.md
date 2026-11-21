@@ -47,9 +47,10 @@
 ## Unreleased — Application Menu
 
 ### Changed
-- Reorganized the shared top navigation into Catalogs, Sales, and Administrator > Security dropdowns.
+- Kept the existing Catalogs hierarchy unchanged and regrouped transaction navigation into Sales and Procurement dropdowns.
+- Sales now contains Sales Orders, Sales Reports, and Customer Payments; Procurement contains Purchase Orders and Supplier Payments.
 - Navigation destinations and their parent menus are shown according to the selected active role's view permissions.
-- Kept the menu responsive for mobile use and retained the existing account and role controls.
+- Kept existing controller routes, responsive navigation, and account and role controls unchanged.
 
 ## Unreleased — Authorization Layer
 
