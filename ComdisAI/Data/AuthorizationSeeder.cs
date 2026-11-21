@@ -79,6 +79,7 @@ public static class AuthorizationSeeder
         (AuthorizationActionCodes.EditDeliveredSalesOrder, "Edit delivered sales orders"),
         (AuthorizationActionCodes.CancelSalesOrder, "Cancel sales orders"),
         (AuthorizationActionCodes.ViewPurchaseOrder, "View purchase orders"),
+        (AuthorizationActionCodes.ViewPurchaseReport, "View purchase reports"),
         (AuthorizationActionCodes.CreatePurchaseOrder, "Create purchase orders"),
         (AuthorizationActionCodes.EditPurchaseOrder, "Edit purchase orders"),
         (AuthorizationActionCodes.ApprovePurchaseOrder, "Approve purchase orders"),
