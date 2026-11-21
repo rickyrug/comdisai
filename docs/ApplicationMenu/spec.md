@@ -5,17 +5,26 @@ The application uses a shared top navigation that remains available throughout t
 - Home
 - Catalogs
   - Products
-  - Product Categories
+  - Customers
+  - Suppliers
   - Configuration
     - Banks
     - Units of Measure
+    - Product Categories
+    - Status
+    - Tax
+  - Administrator
+    - Security
+      - Actions
+      - Roles
+      - Users
+    - Application Logs
 - Sales
-  - Customers
-- Administrator
-  - Security
-    - Actions
-    - Roles
-    - Users
-  - Application Logs
+  - Sales Orders
+  - Sales Reports
+  - Customer Payments
+- Procurement
+  - Purchase Orders
+  - Supplier Payments
 
-Navigation links are shown only when the selected active role grants the corresponding view action. A dropdown group is hidden when none of its destinations are available to that role. The existing sign-in, active-role, role-switch, and sign-out controls remain available; Privacy remains in the footer.
+Navigation links are shown only when the selected active role grants the corresponding view action. A dropdown group is hidden when none of its destinations are available to that role. Catalog destinations retain their existing hierarchy and authorization behavior. The existing sign-in, active-role, role-switch, and sign-out controls remain available; Privacy remains in the footer.

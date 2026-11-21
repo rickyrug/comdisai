@@ -186,34 +186,54 @@
                                 </ul>
                             </li>
                         }
-                        @if (canViewSalesOrders)
+                        @if (canViewSalesOrders || canViewSalesReports || canViewCustomerPayments)
                         {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="SalesOrders" asp-action="Index">Sales Orders</a>
+                            <li class="nav-item dropdown">
+                                <button class="nav-link dropdown-toggle text-dark" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Sales
+                                </button>
+                                <ul class="dropdown-menu">
+                                    @if (canViewSalesOrders)
+                                    {
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="SalesOrders" asp-action="Index">Sales Orders</a>
+                                        </li>
+                                    }
+                                    @if (canViewSalesReports)
+                                    {
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="SalesReports" asp-action="Index">Sales Reports</a>
+                                        </li>
+                                    }
+                                    @if (canViewCustomerPayments)
+                                    {
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="CustomerPayments" asp-action="Index">Customer Payments</a>
+                                        </li>
+                                    }
+                                </ul>
                             </li>
                         }
-                        @if (canViewSalesReports)
+                        @if (canViewPurchaseOrders || canViewSupplierPayments)
                         {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="SalesReports" asp-action="Index">Sales Reports</a>
-                            </li>
-                        }
-                        @if (canViewCustomerPayments)
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="CustomerPayments" asp-action="Index">Customer Payments</a>
-                            </li>
-                        }
-                        @if (canViewPurchaseOrders)
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="PurchaseOrders" asp-action="Index">Purchase Orders</a>
-                            </li>
-                        }
-                        @if (canViewSupplierPayments)
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="SupplierPayments" asp-action="Index">Supplier Payments</a>
+                            <li class="nav-item dropdown">
+                                <button class="nav-link dropdown-toggle text-dark" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Procurement
+                                </button>
+                                <ul class="dropdown-menu">
+                                    @if (canViewPurchaseOrders)
+                                    {
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="PurchaseOrders" asp-action="Index">Purchase Orders</a>
+                                        </li>
+                                    }
+                                    @if (canViewSupplierPayments)
+                                    {
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="SupplierPayments" asp-action="Index">Supplier Payments</a>
+                                        </li>
+                                    }
+                                </ul>
                             </li>
                         }
                     </ul>
