@@ -247,19 +247,30 @@
                     <ul class="navbar-nav">
                         @if (User.Identity?.IsAuthenticated == true)
                         {
-                            <li class="nav-item">
-                                <span class="nav-link text-dark">@User.Identity.Name — @(activeRole?.Code ?? "No active role")</span>
-                            </li>
-                            @if (activeRoles.Count > 1)
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link text-dark" asp-controller="Authentication" asp-action="SelectRole">Switch role</a>
-                                </li>
-                            }
-                            <li class="nav-item">
-                                <form asp-area="" asp-controller="Authentication" asp-action="Logout" method="post">
-                                    <button type="submit" class="nav-link btn btn-link text-dark">Sign out</button>
-                                </form>
+                            <li class="nav-item dropdown">
+                                <button class="nav-link dropdown-toggle text-dark d-flex align-items-center gap-2"
+                                        type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span class="text-truncate">@User.Identity.Name</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li class="px-3 py-2">
+                                        <div class="fw-semibold">@User.Identity.Name</div>
+                                        <div class="small text-secondary">@(activeRole?.Code ?? "No active role")</div>
+                                    </li>
+                                    @if (activeRoles.Count > 1)
+                                    {
+                                        <li><hr class="dropdown-divider" /></li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Authentication" asp-action="SelectRole">Switch role</a>
+                                        </li>
+                                    }
+                                    <li><hr class="dropdown-divider" /></li>
+                                    <li>
+                                        <form asp-area="" asp-controller="Authentication" asp-action="Logout" method="post">
+                                            <button type="submit" class="dropdown-item text-danger">Sign out</button>
+                                        </form>
+                                    </li>
+                                </ul>
                             </li>
                         }
                         else

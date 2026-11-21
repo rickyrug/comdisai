@@ -1,8 +1,448 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@using System.Globalization
+@model HomeDashboardViewModel
+@{
+    ViewData["Title"] = "Panel operativo";
+    ViewData["FullWidth"] = true;
+    var mexicoCulture = CultureInfo.GetCultureInfo("es-MX");
+    var today = DateTime.Today;
+    var todaysDeliveries = Model.ActiveSalesOrders
+        .Where(order => order.DeliveryDate.Date == today)
+        .ToList();
+    var kpis = new[]
+    {
+        Model.MonthlySales,
+        Model.SalesOrdersToFulfill,
+        Model.PurchasesInTransit,
+        Model.DeliveriesToday
+    };
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" />
+
+<div class="dashboard-page">
+    <header class="dashboard-header py-3 py-lg-4">
+        <div class="d-flex flex-column flex-xl-row align-items-xl-end justify-content-between gap-3">
+            <div>
+                <p class="text-secondary mb-0">
+                    @today.ToString("dddd, dd 'de' MMMM 'de' yyyy", mexicoCulture)
+                    <span aria-hidden="true">&middot;</span> Ventas, compras y entregas en curso
+                </p>
+            </div>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <button class="btn btn-outline-secondary dashboard-search-button" type="button"
+                        data-bs-toggle="modal" data-bs-target="#quickSearchModal">
+                    <i class="bi bi-search me-2" aria-hidden="true"></i>
+                    Búsqueda rápida <kbd class="ms-2">Ctrl K</kbd>
+                </button>
+                @if (Model.CanCreateSalesOrder)
+                {
+                    <a class="btn btn-primary" asp-controller="SalesOrders" asp-action="Create">
+                        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Nueva venta
+                    </a>
+                }
+                @if (Model.CanCreatePurchaseOrder)
+                {
+                    <a class="btn btn-outline-primary" asp-controller="PurchaseOrders" asp-action="Create">
+                        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Nueva compra
+                    </a>
+                }
+            </div>
+        </div>
+    </header>
+
+    <section class="pb-4" aria-labelledby="kpi-heading">
+        <h2 id="kpi-heading" class="visually-hidden">Indicadores principales</h2>
+        <div class="row g-3">
+            @foreach (var kpi in kpis)
+            {
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <article class="card dashboard-card dashboard-kpi h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                                <span class="text-secondary fw-medium">@kpi.Label</span>
+                                <span class="dashboard-icon" aria-hidden="true"><i class="bi @kpi.IconClass"></i></span>
+                            </div>
+                            <div class="dashboard-kpi-value mb-1">@kpi.Value</div>
+                            <div class="small fw-semibold text-primary mb-3">@kpi.Detail</div>
+                            <div class="progress dashboard-progress" role="progressbar"
+                                 aria-label="Progreso de @kpi.Label" aria-valuenow="@kpi.ProgressPercent.ToString(CultureInfo.InvariantCulture)"
+                                 aria-valuemin="0" aria-valuemax="100">
+                                <div class="progress-bar" style="width: @(kpi.ProgressPercent.ToString(CultureInfo.InvariantCulture))%;"></div>
+                            </div>
+                            <div class="small text-secondary mt-2 dashboard-mobile-wrap">@kpi.SupportingText</div>
+                        </div>
+                    </article>
+                </div>
+            }
+        </div>
+    </section>
+
+    <div class="row g-4 pb-4 align-items-start">
+        <section class="col-lg-8" aria-labelledby="operations-heading">
+            <div class="card dashboard-card">
+                <div class="card-header bg-white border-bottom-0 px-3 px-md-4 pt-4">
+                    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                        <div>
+                            <h2 id="operations-heading" class="h5 mb-1">Operación diaria</h2>
+                            <p class="small text-secondary mb-0">Prioridades activas y movimientos recientes</p>
+                        </div>
+                        <ul class="nav nav-pills dashboard-tabs" id="dashboardOperationsTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="sales-tab" data-bs-toggle="pill"
+                                        data-bs-target="#sales-panel" type="button" role="tab"
+                                        aria-controls="sales-panel" aria-selected="true">
+                                    Ventas <span class="badge text-bg-light ms-1">@Model.ActiveSalesOrders.Count</span>
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="purchases-tab" data-bs-toggle="pill"
+                                        data-bs-target="#purchases-panel" type="button" role="tab"
+                                        aria-controls="purchases-panel" aria-selected="false">
+                                    Compras <span class="badge text-bg-light ms-1">@Model.PurchaseOrders.Count</span>
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="products-tab" data-bs-toggle="pill"
+                                        data-bs-target="#products-panel" type="button" role="tab"
+                                        aria-controls="products-panel" aria-selected="false">
+                                    Top productos
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body px-0 pb-0">
+                    <div class="tab-content" id="dashboardOperationsContent">
+                        <div class="tab-pane fade show active" id="sales-panel" role="tabpanel"
+                             aria-labelledby="sales-tab" tabindex="0">
+                            <div class="table-responsive">
+                                <table class="table dashboard-table align-middle mb-0">
+                                    <caption class="visually-hidden">Pedidos de venta activos</caption>
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Folio</th>
+                                            <th scope="col">Cliente</th>
+                                            <th scope="col">Fecha</th>
+                                            <th scope="col">Estatus</th>
+                                            <th scope="col" class="text-end">Total</th>
+                                            <th scope="col"><span class="visually-hidden">Acción</span></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var order in Model.ActiveSalesOrders)
+                                        {
+                                            <tr>
+                                                <td class="text-nowrap fw-semibold">@order.OrderNumber</td>
+                                                <td class="dashboard-table-identity">
+                                                    <span class="d-block fw-medium">@order.CustomerName</span>
+                                                    <span class="small text-secondary">@order.CustomerRfc</span>
+                                                </td>
+                                                <td class="text-nowrap">
+                                                    <span class="d-block">@order.OrderDate.ToString("dd MMM", mexicoCulture)</span>
+                                                    <span class="small text-secondary">Entrega @order.DeliveryDate.ToString("dd MMM", mexicoCulture)</span>
+                                                </td>
+                                                <td><span class="badge @order.BadgeClass">@order.Status</span></td>
+                                                <td class="text-end text-nowrap dashboard-number">@order.TotalMxn.ToString("C2", mexicoCulture)</td>
+                                                <td class="text-end">
+                                                    <a class="btn btn-sm btn-outline-primary" asp-controller="SalesOrders"
+                                                       asp-action="Index" asp-route-q="@order.OrderNumber" aria-label="Abrir @order.OrderNumber">
+                                                        <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="dashboard-card-footer px-3 px-md-4">
+                                <span class="small text-secondary">Pedidos con atención activa</span>
+                                <a asp-controller="SalesOrders" asp-action="Index" class="small fw-semibold text-decoration-none">
+                                    Ver todos los pedidos <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="purchases-panel" role="tabpanel"
+                             aria-labelledby="purchases-tab" tabindex="0">
+                            <div class="table-responsive">
+                                <table class="table dashboard-table align-middle mb-0">
+                                    <caption class="visually-hidden">Órdenes de compra activas</caption>
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Folio</th>
+                                            <th scope="col">Proveedor</th>
+                                            <th scope="col">Entrega estimada</th>
+                                            <th scope="col">Estatus</th>
+                                            <th scope="col" class="text-end">Total</th>
+                                            <th scope="col"><span class="visually-hidden">Acción</span></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var order in Model.PurchaseOrders)
+                                        {
+                                            <tr>
+                                                <td class="text-nowrap fw-semibold">@order.OrderNumber</td>
+                                                <td class="dashboard-table-identity">@order.SupplierName</td>
+                                                <td class="text-nowrap">@order.ExpectedDate.ToString("dd MMM yyyy", mexicoCulture)</td>
+                                                <td><span class="badge @order.BadgeClass">@order.Status</span></td>
+                                                <td class="text-end text-nowrap dashboard-number">@order.TotalMxn.ToString("C2", mexicoCulture)</td>
+                                                <td class="text-end">
+                                                    <a class="btn btn-sm btn-outline-primary" asp-controller="PurchaseOrders"
+                                                       asp-action="Index" asp-route-q="@order.OrderNumber" aria-label="Abrir @order.OrderNumber">
+                                                        <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="dashboard-card-footer px-3 px-md-4">
+                                <span class="small text-secondary">Compras abiertas y en tránsito</span>
+                                <a asp-controller="PurchaseOrders" asp-action="Index" class="small fw-semibold text-decoration-none">
+                                    Ver todas las compras <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade p-3 p-md-4" id="products-panel" role="tabpanel"
+                             aria-labelledby="products-tab" tabindex="0">
+                            <div class="d-grid gap-4">
+                                @foreach (var product in Model.TopProducts)
+                                {
+                                    <div class="dashboard-product-row">
+                                        <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
+                                            <div class="dashboard-mobile-wrap">
+                                                <div class="fw-semibold">@product.Name</div>
+                                                <div class="small text-secondary">@product.Code <span aria-hidden="true">&middot;</span> @product.Category</div>
+                                            </div>
+                                            <span class="text-nowrap dashboard-number fw-semibold">@product.UnitsSold.ToString("N2", mexicoCulture) unidades</span>
+                                        </div>
+                                        <div class="progress dashboard-product-progress" role="progressbar"
+                                             aria-label="Rotación de @product.Name" aria-valuenow="@product.RotationPercent.ToString(CultureInfo.InvariantCulture)"
+                                             aria-valuemin="0" aria-valuemax="100">
+                                            <div class="progress-bar" style="width: @(product.RotationPercent.ToString(CultureInfo.InvariantCulture))%;"></div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            <div class="dashboard-card-footer mt-4 px-0 pb-0">
+                                <span class="small text-secondary">Rotación del mes en curso</span>
+                                <a asp-controller="Products" asp-action="Index" class="small fw-semibold text-decoration-none">
+                                    Abrir productos <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <aside class="col-lg-4" aria-label="Resumen operativo">
+            <div class="card dashboard-card mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                        <div>
+                            <p class="dashboard-eyebrow mb-1">Ruta del día</p>
+                            <h2 class="h5 mb-0">Entregas de hoy</h2>
+                        </div>
+                        <span class="badge rounded-pill text-bg-primary">@Model.DeliveriesToday.Value total</span>
+                    </div>
+                    <div class="dashboard-timeline">
+                        @foreach (var delivery in todaysDeliveries)
+                        {
+                            <div class="dashboard-timeline-item">
+                                <div class="dashboard-timeline-marker" aria-hidden="true"></div>
+                                <div class="min-w-0">
+                                    <a class="fw-semibold text-dark text-decoration-none" asp-controller="SalesOrders"
+                                       asp-action="Index" asp-route-q="@delivery.OrderNumber">@delivery.OrderNumber</a>
+                                    <p class="small text-secondary mb-1 dashboard-mobile-wrap">@delivery.CustomerName</p>
+                                    <span class="badge @delivery.BadgeClass">@delivery.Status</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <a asp-controller="SalesOrders" asp-action="Index" class="btn btn-sm btn-outline-primary mt-2">
+                        Revisar programación
+                    </a>
+                </div>
+            </div>
+
+            <div class="card dashboard-card">
+                <div class="card-body p-4">
+                    <p class="dashboard-eyebrow mb-1">Atención requerida</p>
+                    <h2 class="h5 mb-3">Alertas operativas</h2>
+                    @for (var alertIndex = 0; alertIndex < Model.OperationalAlerts.Count; alertIndex++)
+                    {
+                        var alert = Model.OperationalAlerts[alertIndex];
+                        var isLast = alertIndex == Model.OperationalAlerts.Count - 1;
+                        <div class="dashboard-alert-row @(isLast ? "border-bottom-0 pb-0 mb-0" : string.Empty)">
+                            <span class="dashboard-alert-icon @alert.ColorClass" aria-hidden="true"><i class="bi @alert.IconClass"></i></span>
+                            <div>
+                                <div class="fw-semibold">@alert.Title</div>
+                                <p class="small text-secondary mb-0">@alert.Detail</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </aside>
+    </div>
 </div>
+
+<div class="modal fade" id="quickSearchModal" tabindex="-1" aria-labelledby="quickSearchTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-lg modal-dialog-centered">
+        <div class="modal-content dashboard-modal">
+            <div class="modal-header border-bottom-0 pb-2">
+                <div>
+                    <p class="dashboard-eyebrow mb-1">Consulta global</p>
+                    <h2 class="modal-title h5" id="quickSearchTitle">Buscar productos y clientes</h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <label class="visually-hidden" for="quickSearchInput">Buscar por nombre, código o RFC</label>
+                <div class="input-group input-group-lg mb-3">
+                    <span class="input-group-text bg-white"><i class="bi bi-search" aria-hidden="true"></i></span>
+                    <input type="search" id="quickSearchInput" class="form-control"
+                           placeholder="Producto, código, cliente o RFC" autocomplete="off" />
+                </div>
+                <div id="quickSearchNoResults" class="text-center py-5 d-none" role="status">
+                    <i class="bi bi-search h2 text-secondary" aria-hidden="true"></i>
+                    <p class="fw-semibold mt-3 mb-1">Sin coincidencias</p>
+                    <p class="small text-secondary mb-0">Prueba con otro nombre, código o RFC.</p>
+                </div>
+                <div class="quick-search-results">
+                    <section class="quick-search-group mb-4" data-search-group>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h3 class="h6 mb-0">Productos</h3>
+                            <span class="small text-secondary" data-search-count> @Model.ProductSearchResults.Count registros</span>
+                        </div>
+                        <div class="list-group list-group-flush">
+                            @foreach (var product in Model.ProductSearchResults)
+                            {
+                                <a class="list-group-item list-group-item-action quick-search-item" asp-controller="Products"
+                                   asp-action="Index" asp-route-searchTerm="@product.Code"
+                                   data-search-text="@product.Code @product.Name @product.Category">
+                                    <span class="d-flex justify-content-between gap-3">
+                                        <span class="min-w-0 dashboard-mobile-wrap">
+                                            <strong class="d-block">@product.Name</strong>
+                                            <small class="text-secondary">@product.Code &middot; @product.Category</small>
+                                        </span>
+                                        <i class="bi bi-arrow-right text-primary flex-shrink-0" aria-hidden="true"></i>
+                                    </span>
+                                </a>
+                            }
+                        </div>
+                    </section>
+                    <section class="quick-search-group" data-search-group>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h3 class="h6 mb-0">Clientes</h3>
+                            <span class="small text-secondary" data-search-count> @Model.CustomerSearchResults.Count registros</span>
+                        </div>
+                        <div class="list-group list-group-flush">
+                            @foreach (var customer in Model.CustomerSearchResults)
+                            {
+                                <a class="list-group-item list-group-item-action quick-search-item" asp-controller="Customers"
+                                   data-search-text="@customer.Name @customer.Rfc @customer.Location">
+                                    <span class="d-flex justify-content-between gap-3">
+                                        <span class="min-w-0 dashboard-mobile-wrap">
+                                            <strong class="d-block">@customer.Name</strong>
+                                            <small class="text-secondary">@customer.Rfc &middot; @customer.Location</small>
+                                        </span>
+                                        <i class="bi bi-arrow-right text-primary flex-shrink-0" aria-hidden="true"></i>
+                                    </span>
+                                </a>
+                            }
+                        </div>
+                    </section>
+                </div>
+                <p class="visually-hidden" id="quickSearchStatus" aria-live="polite"></p>
+            </div>
+            <div class="modal-footer justify-content-between border-top-0 pt-0">
+                <span class="small text-secondary"><kbd>Esc</kbd> para cerrar</span>
+                <span class="small text-secondary">Búsqueda en productos y clientes activos</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const modalElement = document.getElementById('quickSearchModal');
+            const searchInput = document.getElementById('quickSearchInput');
+            const noResults = document.getElementById('quickSearchNoResults');
+            const status = document.getElementById('quickSearchStatus');
+            const searchItems = Array.from(modalElement.querySelectorAll('.quick-search-item'));
+            const searchGroups = Array.from(modalElement.querySelectorAll('[data-search-group]'));
+            let returnFocusTo = null;
+
+            if (!window.bootstrap || !modalElement || !searchInput || !noResults || !status) {
+                return;
+            }
+
+            const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+            const normalize = function (value) {
+                return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLocaleLowerCase('es-MX').trim();
+            };
+
+            const filterResults = function () {
+                const query = normalize(searchInput.value);
+                let visibleCount = 0;
+
+                searchItems.forEach(function (item) {
+                    const matches = !query || normalize(item.dataset.searchText || '').includes(query);
+                    item.classList.toggle('d-none', !matches);
+                    if (matches) {
+                        visibleCount += 1;
+                    }
+                });
+
+                searchGroups.forEach(function (group) {
+                    const groupItems = Array.from(group.querySelectorAll('.quick-search-item'));
+                    const groupCount = groupItems.filter(function (item) {
+                        return !item.classList.contains('d-none');
+                    }).length;
+                    group.classList.toggle('d-none', groupCount === 0);
+                    const count = group.querySelector('[data-search-count]');
+                    if (count) {
+                        count.textContent = `${groupCount} ${groupCount === 1 ? 'registro' : 'registros'}`;
+                    }
+                });
+
+                noResults.classList.toggle('d-none', visibleCount !== 0);
+                status.textContent = visibleCount === 1 ? '1 resultado' : `${visibleCount} resultados`;
+            };
+
+            document.addEventListener('keydown', function (event) {
+                if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+                    event.preventDefault();
+                    returnFocusTo = document.activeElement;
+                    searchInput.value = '';
+                    filterResults();
+                    modal.show();
+                }
+            });
+
+            modalElement.addEventListener('show.bs.modal', function () {
+                returnFocusTo = returnFocusTo || document.activeElement;
+            });
+
+            modalElement.addEventListener('shown.bs.modal', function () {
+                searchInput.focus();
+                searchInput.select();
+            });
+
+            modalElement.addEventListener('hidden.bs.modal', function () {
+                if (returnFocusTo && typeof returnFocusTo.focus === 'function') {
+                    returnFocusTo.focus();
+                }
+                returnFocusTo = null;
+            });
+
+            searchInput.addEventListener('input', filterResults);
+            filterResults();
+        });
+    </script>
+}
