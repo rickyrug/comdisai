@@ -5,7 +5,6 @@
     ViewData["FullWidth"] = true;
     var mexicoCulture = CultureInfo.GetCultureInfo("es-MX");
     var today = DateTime.Today;
-    var greetingName = User.Identity?.Name ?? "equipo";
     var todaysDeliveries = Model.ActiveSalesOrders
         .Where(order => order.DeliveryDate.Date == today)
         .ToList();
@@ -24,8 +23,6 @@
     <header class="dashboard-header py-3 py-lg-4">
         <div class="d-flex flex-column flex-xl-row align-items-xl-end justify-content-between gap-3">
             <div>
-                <p class="dashboard-eyebrow mb-1">Centro de operaciones</p>
-                <h1 class="dashboard-title mb-1">Hola, @greetingName</h1>
                 <p class="text-secondary mb-0">
                     @today.ToString("dddd, dd 'de' MMMM 'de' yyyy", mexicoCulture)
                     <span aria-hidden="true">&middot;</span> Ventas, compras y entregas en curso
@@ -219,7 +216,7 @@
                                                 <div class="fw-semibold">@product.Name</div>
                                                 <div class="small text-secondary">@product.Code <span aria-hidden="true">&middot;</span> @product.Category</div>
                                             </div>
-                                            <span class="text-nowrap dashboard-number fw-semibold">@product.UnitsSold unidades</span>
+                                            <span class="text-nowrap dashboard-number fw-semibold">@product.UnitsSold.ToString("N2", mexicoCulture) unidades</span>
                                         </div>
                                         <div class="progress dashboard-product-progress" role="progressbar"
                                              aria-label="Rotación de @product.Name" aria-valuenow="@product.RotationPercent.ToString(CultureInfo.InvariantCulture)"
@@ -275,27 +272,18 @@
                 <div class="card-body p-4">
                     <p class="dashboard-eyebrow mb-1">Atención requerida</p>
                     <h2 class="h5 mb-3">Alertas operativas</h2>
-                    <div class="dashboard-alert-row">
-                        <span class="dashboard-alert-icon text-warning" aria-hidden="true"><i class="bi bi-exclamation-circle"></i></span>
-                        <div>
-                            <div class="fw-semibold">2 pedidos sin factura</div>
-                            <p class="small text-secondary mb-0">Revisar documentación antes del cierre.</p>
+                    @for (var alertIndex = 0; alertIndex < Model.OperationalAlerts.Count; alertIndex++)
+                    {
+                        var alert = Model.OperationalAlerts[alertIndex];
+                        var isLast = alertIndex == Model.OperationalAlerts.Count - 1;
+                        <div class="dashboard-alert-row @(isLast ? "border-bottom-0 pb-0 mb-0" : string.Empty)">
+                            <span class="dashboard-alert-icon @alert.ColorClass" aria-hidden="true"><i class="bi @alert.IconClass"></i></span>
+                            <div>
+                                <div class="fw-semibold">@alert.Title</div>
+                                <p class="small text-secondary mb-0">@alert.Detail</p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="dashboard-alert-row">
-                        <span class="dashboard-alert-icon text-info" aria-hidden="true"><i class="bi bi-truck"></i></span>
-                        <div>
-                            <div class="fw-semibold">2 arribos esta semana</div>
-                            <p class="small text-secondary mb-0">Confirmar espacio de recepción.</p>
-                        </div>
-                    </div>
-                    <div class="dashboard-alert-row border-bottom-0 pb-0 mb-0">
-                        <span class="dashboard-alert-icon text-success" aria-hidden="true"><i class="bi bi-arrow-repeat"></i></span>
-                        <div>
-                            <div class="fw-semibold">Catálogo sincronizado</div>
-                            <p class="small text-secondary mb-0">Última revisión operativa: 08:45.</p>
-                        </div>
-                    </div>
+                    }
                 </div>
             </div>
         </aside>
@@ -356,11 +344,11 @@
                             @foreach (var customer in Model.CustomerSearchResults)
                             {
                                 <a class="list-group-item list-group-item-action quick-search-item" asp-controller="Customers"
-                                   asp-action="Index" data-search-text="@customer.Name @customer.Rfc @customer.City">
+                                   data-search-text="@customer.Name @customer.Rfc @customer.Location">
                                     <span class="d-flex justify-content-between gap-3">
                                         <span class="min-w-0 dashboard-mobile-wrap">
                                             <strong class="d-block">@customer.Name</strong>
-                                            <small class="text-secondary">@customer.Rfc &middot; @customer.City</small>
+                                            <small class="text-secondary">@customer.Rfc &middot; @customer.Location</small>
                                         </span>
                                         <i class="bi bi-arrow-right text-primary flex-shrink-0" aria-hidden="true"></i>
                                     </span>
@@ -373,7 +361,7 @@
             </div>
             <div class="modal-footer justify-content-between border-top-0 pt-0">
                 <span class="small text-secondary"><kbd>Esc</kbd> para cerrar</span>
-                <span class="small text-secondary">Búsqueda en datos de muestra</span>
+                <span class="small text-secondary">Búsqueda en productos y clientes activos</span>
             </div>
         </div>
     </div>

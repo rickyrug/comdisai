@@ -1,13 +1,17 @@
 using System.Diagnostics;
 using System.Globalization;
 using ComdisAI.Authorization;
+using ComdisAI.Data;
 using ComdisAI.Models;
 using ComdisAI.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace ComdisAI.Controllers;
 
-public class HomeController(IActionPermissionService permissionService) : Controller
+public class HomeController(
+    IActionPermissionService permissionService,
+    AppDbContext dbContext) : Controller
 {
     [RequireAction(AuthorizationActionCodes.ViewHome)]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
@@ -19,9 +23,10 @@ public class HomeController(IActionPermissionService permissionService) : Contro
 
         await Task.WhenAll(canCreateSalesOrderTask, canCreatePurchaseOrderTask);
 
-        return View(BuildDashboard(
+        return View(await BuildDashboardAsync(
             canCreateSalesOrderTask.Result,
-            canCreatePurchaseOrderTask.Result));
+            canCreatePurchaseOrderTask.Result,
+            cancellationToken));
     }
 
     [RequireAction(AuthorizationActionCodes.ViewPrivacy)]
@@ -37,95 +42,233 @@ public class HomeController(IActionPermissionService permissionService) : Contro
         return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
 
-    private static HomeDashboardViewModel BuildDashboard(
+    private async Task<HomeDashboardViewModel> BuildDashboardAsync(
         bool canCreateSalesOrder,
-        bool canCreatePurchaseOrder)
+        bool canCreatePurchaseOrder,
+        CancellationToken cancellationToken)
     {
         var today = DateTime.Today;
+        var tomorrow = today.AddDays(1);
+        var monthStart = new DateTime(today.Year, today.Month, 1);
+        var nextMonthStart = monthStart.AddMonths(1);
+        var previousMonthStart = monthStart.AddMonths(-1);
         var mexicoCulture = CultureInfo.GetCultureInfo("es-MX");
+
+        var periodSales = await dbContext.SalesOrderHeaders
+            .AsNoTracking()
+            .Include(order => order.Status)
+            .Where(order => order.DeliveryDate >= previousMonthStart && order.DeliveryDate < nextMonthStart)
+            .Where(order =>
+                EF.Property<string>(order.Status, "NormalizedName") == "APPROVED" ||
+                EF.Property<string>(order.Status, "NormalizedName") == "DELIVERED" ||
+                EF.Property<string>(order.Status, "NormalizedName") == "PAID")
+            .ToListAsync(cancellationToken);
+        var monthlySales = periodSales.Where(order => order.DeliveryDate >= monthStart).ToList();
+        var previousMonthSales = periodSales.Where(order => order.DeliveryDate < monthStart).ToList();
+        var monthlySalesTotal = monthlySales.Sum(order => order.Total);
+        var previousMonthSalesTotal = previousMonthSales.Sum(order => order.Total);
+
+        var salesToFulfill = await dbContext.SalesOrderHeaders
+            .AsNoTracking()
+            .Include(order => order.Customer)
+            .Include(order => order.Status)
+            .Where(order =>
+                EF.Property<string>(order.Status, "NormalizedName") == "APPROVED" &&
+                order.IsDelivered != true)
+            .OrderBy(order => order.DeliveryDate)
+            .ThenBy(order => order.OrderNumber)
+            .ToListAsync(cancellationToken);
+        var purchasesInTransit = await dbContext.PurchaseOrderHeaders
+            .AsNoTracking()
+            .Include(order => order.Supplier)
+            .Include(order => order.Status)
+            .Where(order =>
+                EF.Property<string>(order.Status, "NormalizedName") == "APPROVED" &&
+                order.ReceivedAtUtc == null)
+            .OrderBy(order => order.SupplyDate)
+            .ThenBy(order => order.OrderNumber)
+            .ToListAsync(cancellationToken);
+        var deliveriesToday = await dbContext.SalesOrderHeaders
+            .AsNoTracking()
+            .Include(order => order.Customer)
+            .Include(order => order.Status)
+            .Where(order => order.DeliveryDate >= today && order.DeliveryDate < tomorrow)
+            .Where(order =>
+                EF.Property<string>(order.Status, "NormalizedName") == "APPROVED" ||
+                EF.Property<string>(order.Status, "NormalizedName") == "DELIVERED" ||
+                EF.Property<string>(order.Status, "NormalizedName") == "PAID")
+            .OrderBy(order => order.OrderNumber)
+            .ToListAsync(cancellationToken);
+
+        var productMovements = await dbContext.SalesOrderDetails
+            .AsNoTracking()
+            .Include(detail => detail.Product)
+                .ThenInclude(product => product.ProductCategory)
+            .Include(detail => detail.SalesOrderHeader)
+                .ThenInclude(order => order.Status)
+            .Where(detail =>
+                detail.SalesOrderHeader.DeliveryDate >= monthStart &&
+                detail.SalesOrderHeader.DeliveryDate < nextMonthStart)
+            .Where(detail =>
+                EF.Property<string>(detail.SalesOrderHeader.Status, "NormalizedName") == "DELIVERED" ||
+                EF.Property<string>(detail.SalesOrderHeader.Status, "NormalizedName") == "PAID")
+            .ToListAsync(cancellationToken);
+        var products = await dbContext.Products
+            .AsNoTracking()
+            .Include(product => product.ProductCategory)
+            .OrderBy(product => product.Code)
+            .ToListAsync(cancellationToken);
+        var customers = await dbContext.Customers
+            .AsNoTracking()
+            .OrderBy(customer => customer.Name)
+            .ToListAsync(cancellationToken);
+
+        var monthlySalesChange = previousMonthSalesTotal > 0m
+            ? (monthlySalesTotal - previousMonthSalesTotal) / previousMonthSalesTotal * 100m
+            : (decimal?)null;
+        var salesToFulfillToday = salesToFulfill.Count(order => order.DeliveryDate.Date == today);
+        var purchasesThisWeek = purchasesInTransit.Count(order =>
+            order.SupplyDate >= today && order.SupplyDate < today.AddDays(8));
+        var deliveredToday = deliveriesToday.Count(order =>
+            order.IsDelivered == true || IsStatus(order.Status, "Delivered"));
+        var pendingToday = deliveriesToday.Count - deliveredToday;
+        var topProducts = productMovements
+            .GroupBy(detail => detail.ProductId)
+            .Select(group =>
+            {
+                var product = group.First().Product;
+                return new
+                {
+                    product.Code,
+                    product.Name,
+                    Category = product.ProductCategory.Name,
+                    UnitsSold = group.Sum(detail => detail.Qty)
+                };
+            })
+            .OrderByDescending(product => product.UnitsSold)
+            .Take(5)
+            .ToList();
+        var maxUnitsSold = topProducts.FirstOrDefault()?.UnitsSold ?? 0m;
 
         return new HomeDashboardViewModel
         {
             MonthlySales = new DashboardKpiViewModel
             {
                 Label = "Ventas del mes",
-                Value = 1_284_650m.ToString("C0", mexicoCulture),
-                Detail = "+12.8% vs. mes anterior",
-                SupportingText = $"Meta mensual: {1_750_000m.ToString("C0", mexicoCulture)}",
-                ProgressPercent = 73.4m,
+                Value = monthlySalesTotal.ToString("C0", mexicoCulture),
+                Detail = monthlySalesChange is null
+                    ? "Sin referencia del mes anterior"
+                    : $"{monthlySalesChange:+0.0;-0.0;0.0}% vs. mes anterior",
+                SupportingText = $"{monthlySales.Count} pedidos · mes anterior {previousMonthSalesTotal.ToString("C0", mexicoCulture)}",
+                ProgressPercent = CalculateProgress(
+                    monthlySalesTotal,
+                    Math.Max(monthlySalesTotal, previousMonthSalesTotal)),
                 IconClass = "bi-graph-up-arrow"
             },
             SalesOrdersToFulfill = new DashboardKpiViewModel
             {
                 Label = "Pedidos por surtir",
-                Value = "8",
-                Detail = "4 programados para hoy",
-                SupportingText = $"Cartera abierta: {742_380m.ToString("C0", mexicoCulture)}",
-                ProgressPercent = 50m,
+                Value = salesToFulfill.Count.ToString(CultureInfo.InvariantCulture),
+                Detail = $"{salesToFulfillToday} programados para hoy",
+                SupportingText = $"Cartera abierta: {salesToFulfill.Sum(order => order.Total).ToString("C0", mexicoCulture)}",
+                ProgressPercent = CalculateProgress(salesToFulfillToday, salesToFulfill.Count),
                 IconClass = "bi-box-seam"
             },
             PurchasesInTransit = new DashboardKpiViewModel
             {
                 Label = "Compras en tránsito",
-                Value = "5",
-                Detail = $"{486_920m.ToString("C0", mexicoCulture)} en tránsito",
-                SupportingText = "2 arribos previstos esta semana",
-                ProgressPercent = 60m,
+                Value = purchasesInTransit.Count.ToString(CultureInfo.InvariantCulture),
+                Detail = $"{purchasesInTransit.Sum(order => order.Total).ToString("C0", mexicoCulture)} en tránsito",
+                SupportingText = $"{purchasesThisWeek} arribos previstos esta semana",
+                ProgressPercent = CalculateProgress(purchasesThisWeek, purchasesInTransit.Count),
                 IconClass = "bi-truck"
             },
             DeliveriesToday = new DashboardKpiViewModel
             {
                 Label = "Entregas hoy",
-                Value = "6",
-                Detail = "2 entregadas · 4 pendientes",
-                SupportingText = "Próxima ruta: 11:30",
-                ProgressPercent = 33.3m,
+                Value = deliveriesToday.Count.ToString(CultureInfo.InvariantCulture),
+                Detail = $"{deliveredToday} entregadas · {pendingToday} pendientes",
+                SupportingText = $"Valor programado: {deliveriesToday.Sum(order => order.Total).ToString("C0", mexicoCulture)}",
+                ProgressPercent = CalculateProgress(deliveredToday, deliveriesToday.Count),
                 IconClass = "bi-calendar-check"
             },
             CanCreateSalesOrder = canCreateSalesOrder,
             CanCreatePurchaseOrder = canCreatePurchaseOrder,
-            ActiveSalesOrders =
+            ActiveSalesOrders = salesToFulfill
+                .Select(order => SalesOrder(
+                    order.OrderNumber,
+                    order.Customer.Name,
+                    order.Customer.RFC,
+                    order.CreatedAtUtc,
+                    order.DeliveryDate,
+                    order.Total,
+                    order.Status.Name,
+                    GetBadgeClass(order.Status.Name)))
+                .ToList(),
+            PurchaseOrders = purchasesInTransit
+                .Select(order => PurchaseOrder(
+                    order.OrderNumber,
+                    order.Supplier.Name,
+                    order.SupplyDate,
+                    order.Total,
+                    order.Status.Name,
+                    GetBadgeClass(order.Status.Name)))
+                .ToList(),
+            TopProducts = topProducts
+                .Select(product => TopProduct(
+                    product.Code,
+                    product.Name,
+                    product.Category,
+                    product.UnitsSold,
+                    CalculateProgress(product.UnitsSold, maxUnitsSold)))
+                .ToList(),
+            ProductSearchResults = products
+                .Select(product => ProductSearch(
+                    product.Code,
+                    product.Name,
+                    product.ProductCategory.Name))
+                .ToList(),
+            CustomerSearchResults = customers
+                .Select(customer => CustomerSearch(
+                    customer.Name,
+                    customer.RFC,
+                    customer.Address))
+                .ToList(),
+            OperationalAlerts =
             [
-                SalesOrder("2026-00184", "Distribuidora La Fragua, S.A. de C.V.", "DFR1503208A1", today.AddDays(-2), today, 86_240m, "Aprobado", "text-bg-success"),
-                SalesOrder("2026-00183", "Abastecedora del Centro", "ACE901107P42", today.AddDays(-2), today, 54_760m, "Preparando", "text-bg-warning"),
-                SalesOrder("2026-00180", "Grupo Comercial Bajío, S.A.P.I.", "GCB120615KJ8", today.AddDays(-3), today.AddDays(1), 123_980m, "Aprobado", "text-bg-success"),
-                SalesOrder("2026-00178", "Ferreterías Unión Norte", "FUN0802147L5", today.AddDays(-4), today.AddDays(1), 38_450m, "Por facturar", "text-bg-primary"),
-                SalesOrder("2026-00175", "Servicios Industriales Pacífico", "SIP190911M10", today.AddDays(-5), today.AddDays(2), 97_630m, "En ruta", "text-bg-info")
-            ],
-            PurchaseOrders =
-            [
-                PurchaseOrder("2026-00067", "Empaques del Valle, S.A. de C.V.", today.AddDays(1), 148_600m, "En tránsito", "text-bg-info"),
-                PurchaseOrder("2026-00065", "Suministros Técnicos Monterrey", today.AddDays(2), 96_840m, "Aprobado", "text-bg-success"),
-                PurchaseOrder("2026-00063", "Materiales Guadalajara, S.A.", today.AddDays(4), 174_320m, "En tránsito", "text-bg-info"),
-                PurchaseOrder("2026-00061", "Componentes Industriales del Sur", today.AddDays(6), 67_160m, "Confirmado", "text-bg-primary")
-            ],
-            TopProducts =
-            [
-                TopProduct("A0142", "Caja corrugada doble 40 × 30 cm", "Empaque", 486, 100m),
-                TopProduct("B0087", "Guante nitrilo industrial talla L", "Seguridad", 392, 80.7m),
-                TopProduct("C0218", "Aceite lubricante sintético 20 L", "Mantenimiento", 318, 65.4m),
-                TopProduct("D0056", "Etiqueta térmica 100 × 150 mm", "Consumibles", 271, 55.8m),
-                TopProduct("A0094", "Película estirable 500 mm", "Empaque", 229, 47.1m)
-            ],
-            ProductSearchResults =
-            [
-                ProductSearch("A0142", "Caja corrugada doble 40 × 30 cm", "Empaque"),
-                ProductSearch("B0087", "Guante nitrilo industrial talla L", "Seguridad"),
-                ProductSearch("C0218", "Aceite lubricante sintético 20 L", "Mantenimiento"),
-                ProductSearch("D0056", "Etiqueta térmica 100 × 150 mm", "Consumibles"),
-                ProductSearch("A0094", "Película estirable 500 mm", "Empaque"),
-                ProductSearch("E0031", "Tarima plástica reforzada", "Logística")
-            ],
-            CustomerSearchResults =
-            [
-                CustomerSearch("Distribuidora La Fragua, S.A. de C.V.", "DFR1503208A1", "Querétaro"),
-                CustomerSearch("Abastecedora del Centro", "ACE901107P42", "León"),
-                CustomerSearch("Grupo Comercial Bajío, S.A.P.I.", "GCB120615KJ8", "Guadalajara"),
-                CustomerSearch("Ferreterías Unión Norte", "FUN0802147L5", "Monterrey"),
-                CustomerSearch("Servicios Industriales Pacífico", "SIP190911M10", "Tijuana")
+                OperationalAlert(
+                    $"{salesToFulfill.Count} pedidos pendientes de surtir",
+                    salesToFulfillToday > 0
+                        ? $"{salesToFulfillToday} tienen entrega programada hoy."
+                        : "Sin entregas pendientes programadas para hoy.",
+                    "bi-box-seam",
+                    "text-warning"),
+                OperationalAlert(
+                    $"{purchasesThisWeek} arribos esta semana",
+                    $"{purchasesInTransit.Count} compras permanecen abiertas.",
+                    "bi-truck",
+                    "text-info"),
+                OperationalAlert(
+                    $"{products.Count} productos activos",
+                    $"{customers.Count} clientes disponibles para venta.",
+                    "bi-box",
+                    "text-success")
             ]
         };
     }
+
+    private static DashboardOperationalAlertViewModel OperationalAlert(
+        string title,
+        string detail,
+        string iconClass,
+        string colorClass) =>
+        new()
+        {
+            Title = title,
+            Detail = detail,
+            IconClass = iconClass,
+            ColorClass = colorClass
+        };
 
     private static DashboardSalesOrderRowViewModel SalesOrder(
         string orderNumber,
@@ -169,7 +312,7 @@ public class HomeController(IActionPermissionService permissionService) : Contro
         string code,
         string name,
         string category,
-        int unitsSold,
+        decimal unitsSold,
         decimal rotationPercent) =>
         new()
         {
@@ -178,6 +321,21 @@ public class HomeController(IActionPermissionService permissionService) : Contro
             Category = category,
             UnitsSold = unitsSold,
             RotationPercent = rotationPercent
+        };
+
+    private static decimal CalculateProgress(decimal value, decimal total) =>
+        total <= 0m ? 0m : Math.Clamp(value / total * 100m, 0m, 100m);
+
+    private static bool IsStatus(Status status, string expected) =>
+        string.Equals(status.Name, expected, StringComparison.OrdinalIgnoreCase);
+
+    private static string GetBadgeClass(string status) =>
+        status.Trim().ToUpperInvariant() switch
+        {
+            "APPROVED" or "PAID" or "DELIVERED" or "SUPPLIED" => "text-bg-success",
+            "CANCELLED" => "text-bg-danger",
+            "DRAFT" => "text-bg-secondary",
+            _ => "text-bg-primary"
         };
 
     private static DashboardProductSearchViewModel ProductSearch(
@@ -194,11 +352,11 @@ public class HomeController(IActionPermissionService permissionService) : Contro
     private static DashboardCustomerSearchViewModel CustomerSearch(
         string name,
         string rfc,
-        string city) =>
+        string location) =>
         new()
         {
             Name = name,
             Rfc = rfc,
-            City = city
+            Location = location
         };
 }

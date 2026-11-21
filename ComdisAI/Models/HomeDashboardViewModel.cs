@@ -23,6 +23,19 @@ public sealed class HomeDashboardViewModel
     public IReadOnlyList<DashboardProductSearchViewModel> ProductSearchResults { get; init; } = [];
 
     public IReadOnlyList<DashboardCustomerSearchViewModel> CustomerSearchResults { get; init; } = [];
+
+    public IReadOnlyList<DashboardOperationalAlertViewModel> OperationalAlerts { get; init; } = [];
+}
+
+public sealed class DashboardOperationalAlertViewModel
+{
+    public string Title { get; init; } = string.Empty;
+
+    public string Detail { get; init; } = string.Empty;
+
+    public string IconClass { get; init; } = string.Empty;
+
+    public string ColorClass { get; init; } = string.Empty;
 }
 
 public sealed class DashboardKpiViewModel
@@ -82,7 +95,7 @@ public sealed class DashboardTopProductViewModel
 
     public string Category { get; init; } = string.Empty;
 
-    public int UnitsSold { get; init; }
+    public decimal UnitsSold { get; init; }
 
     public decimal RotationPercent { get; init; }
 }
@@ -102,5 +115,5 @@ public sealed class DashboardCustomerSearchViewModel
 
     public string Rfc { get; init; } = string.Empty;
 
-    public string City { get; init; } = string.Empty;
+    public string Location { get; init; } = string.Empty;
 }
