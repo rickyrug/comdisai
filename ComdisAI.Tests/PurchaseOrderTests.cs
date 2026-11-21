@@ -444,6 +444,7 @@ public sealed class PurchaseOrderTests
 
         var codes = await database.Context.Actions.Select(action => action.Code).ToListAsync();
         Assert.Contains(AuthorizationActionCodes.ViewPurchaseOrder, codes);
+        Assert.Contains(AuthorizationActionCodes.ViewPurchaseReport, codes);
         Assert.Contains(AuthorizationActionCodes.ApprovePurchaseOrder, codes);
         Assert.Contains(AuthorizationActionCodes.EditSuppliedPurchaseOrder, codes);
         Assert.Contains(AuthorizationActionCodes.ViewSupplierPriceList, codes);

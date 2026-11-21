@@ -1,5 +1,12 @@
 # Release Notes
 
+## Unreleased — Purchase Reports
+
+### Added
+- Purchase Reports under Procurement, protected by the dedicated `VIEW_PURCHASE_REPORT` action.
+- Inclusive expected-supply-date reporting with purchase-order status filtering, detail rows, period totals, and summaries by status.
+- Runtime authorization-action seeding and focused report coverage; no database migration is required.
+
 ## Unreleased — Paid Sales Orders
 
 - Fully allocated sales orders become Paid, with delivery tracked separately and reopened balances restoring the prior fulfillment state.

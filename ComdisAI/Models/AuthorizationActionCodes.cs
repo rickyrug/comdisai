@@ -70,6 +70,7 @@ public static class AuthorizationActionCodes
     public const string EditDeliveredSalesOrder = "EDIT_DELIVERED_SALES_ORDER";
     public const string CancelSalesOrder = "CANCEL_SALES_ORDER";
     public const string ViewPurchaseOrder = "VIEW_PURCHASE_ORDER";
+    public const string ViewPurchaseReport = "VIEW_PURCHASE_REPORT";
     public const string CreatePurchaseOrder = "CREATE_PURCHASE_ORDER";
     public const string EditPurchaseOrder = "EDIT_PURCHASE_ORDER";
     public const string ApprovePurchaseOrder = "APPROVE_PURCHASE_ORDER";
