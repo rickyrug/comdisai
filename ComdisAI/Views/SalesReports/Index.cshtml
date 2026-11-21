@@ -5,6 +5,31 @@
     var currencyCulture = CultureInfo.GetCultureInfo("en-US");
 }
 
+<style>
+    .status-filter__toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 38px;
+    }
+
+    .status-filter__toggle span {
+        overflow: hidden;
+        margin-right: 0.5rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .status-filter__menu {
+        max-height: 20rem;
+        overflow-y: auto;
+    }
+
+    .status-filter__option {
+        padding: 0.25rem 0.5rem 0.25rem 2rem;
+    }
+</style>
+
 <div class="mb-3">
     <h1>Sales Report</h1>
 </div>
@@ -18,11 +43,36 @@
         <label asp-for="EndDate" class="form-label">To</label>
         <input asp-for="EndDate" type="date" class="form-control" />
     </div>
-    <div class="col-sm-4 col-lg-3">
-        <label asp-for="StatusIds" class="form-label">Statuses</label>
-        <select asp-for="StatusIds" asp-items="Model.StatusOptions" class="form-select"
-            data-searchable="true" data-placeholder="All statuses" data-no-results="No statuses found" multiple>
-        </select>
+    <div class="col-sm-5 col-lg-4">
+        <label class="form-label" for="status-filter-toggle">Statuses</label>
+        <div class="dropdown status-filter" data-status-filter>
+            <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start status-filter__toggle"
+                    id="status-filter-toggle" type="button" data-bs-toggle="dropdown"
+                    data-bs-auto-close="outside" aria-expanded="false">
+                <span data-status-filter-label>All statuses</span>
+            </button>
+            <div class="dropdown-menu w-100 p-2 status-filter__menu" aria-labelledby="status-filter-toggle">
+                <input type="search" class="form-control form-control-sm mb-2"
+                       placeholder="Search statuses" aria-label="Search statuses" data-status-filter-search />
+                <div class="form-check status-filter__option mb-1">
+                    <input class="form-check-input" type="checkbox" id="status-all"
+                           checked="@(Model.StatusIds.Count == 0)" data-status-filter-all />
+                    <label class="form-check-label" for="status-all">All statuses</label>
+                </div>
+                <div class="dropdown-divider my-1"></div>
+                @foreach (var status in Model.StatusOptions)
+                {
+                    <div class="form-check status-filter__option"
+                         data-status-filter-option data-search-text="@status.Text">
+                        <input class="form-check-input" type="checkbox" name="StatusIds"
+                               value="@status.Value" id="status-@status.Value" checked="@status.Selected"
+                               data-status-filter-checkbox />
+                        <label class="form-check-label" for="status-@status.Value">@status.Text</label>
+                    </div>
+                }
+                <div class="small text-muted px-1 pt-1" data-status-filter-empty hidden>No statuses found</div>
+            </div>
+        </div>
     </div>
     <div class="col-auto">
         <button type="submit" class="btn btn-primary">Run report</button>
@@ -105,5 +155,47 @@
 }
 
 @section Scripts {
-    <partial name="_Select2Partial" />
+    <script>
+        document.querySelectorAll("[data-status-filter]").forEach((filter) => {
+            const label = filter.querySelector("[data-status-filter-label]");
+            const allCheckbox = filter.querySelector("[data-status-filter-all]");
+            const checkboxes = Array.from(filter.querySelectorAll("[data-status-filter-checkbox]"));
+            const options = Array.from(filter.querySelectorAll("[data-status-filter-option]"));
+            const search = filter.querySelector("[data-status-filter-search]");
+            const empty = filter.querySelector("[data-status-filter-empty]");
+
+            function updateSelection() {
+                const selected = checkboxes.filter((checkbox) => checkbox.checked);
+                allCheckbox.checked = selected.length === 0;
+                if (selected.length === 0) {
+                    label.textContent = "All statuses";
+                } else if (selected.length === 1) {
+                    label.textContent = selected[0].closest(".form-check").querySelector("label").textContent;
+                } else {
+                    label.textContent = `${selected.length} statuses selected`;
+                }
+            }
+
+            allCheckbox.addEventListener("change", () => {
+                if (allCheckbox.checked) {
+                    checkboxes.forEach((checkbox) => { checkbox.checked = false; });
+                } else {
+                    allCheckbox.checked = true;
+                }
+                updateSelection();
+            });
+            checkboxes.forEach((checkbox) => checkbox.addEventListener("change", updateSelection));
+            search.addEventListener("input", () => {
+                const term = search.value.trim().toLocaleLowerCase();
+                let visibleCount = 0;
+                options.forEach((option) => {
+                    const matches = option.dataset.searchText.toLocaleLowerCase().includes(term);
+                    option.hidden = !matches;
+                    if (matches) visibleCount += 1;
+                });
+                empty.hidden = visibleCount > 0;
+            });
+            updateSelection();
+        });
+    </script>
 }
