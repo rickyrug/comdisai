@@ -7,6 +7,7 @@ using ComdisAI.Repositories;
 using ComdisAI.Services;
 using ComdisAI.ViewModels.Authentication;
 using ComdisAI.ViewModels.SalesOrders;
+using ComdisAI.ViewModels.SalesReports;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
@@ -375,6 +376,123 @@ public sealed class SalesOrderTests
     }
 
     [Fact]
+    public async Task Sales_report_includes_date_boundaries_filters_status_and_totals_rows()
+    {
+        using var database = await CreateDatabaseAsync();
+        var setup = await SeedSalesOrderLookupsAsync(database.Context);
+        var startDate = new DateOnly(2026, 11, 10);
+        var endDate = new DateOnly(2026, 11, 12);
+        var startOrder = new SalesOrderHeader
+        {
+            OrderNumber = "2026-00010",
+            Customer = setup.Customer,
+            DeliveryAddress = "Start address",
+            DeliveryDate = startDate.ToDateTime(TimeOnly.MinValue),
+            Status = setup.Statuses["Draft"],
+            Tax = setup.Tax,
+            Total = 125m
+        };
+        var endOrder = new SalesOrderHeader
+        {
+            OrderNumber = "2026-00011",
+            Customer = setup.Customer,
+            DeliveryAddress = "End address",
+            DeliveryDate = endDate.ToDateTime(TimeOnly.MinValue),
+            Status = setup.Statuses["Approved"],
+            Tax = setup.Tax,
+            Total = 275m
+        };
+        var thirdStatusOrder = new SalesOrderHeader
+        {
+            OrderNumber = "2026-00013",
+            Customer = setup.Customer,
+            DeliveryAddress = "Third status address",
+            DeliveryDate = startDate.AddDays(1).ToDateTime(TimeOnly.MinValue),
+            Status = setup.Statuses["Delivered"],
+            Tax = setup.Tax,
+            Total = 90m
+        };
+        var outsideOrder = new SalesOrderHeader
+        {
+            OrderNumber = "2026-00012",
+            Customer = setup.Customer,
+            DeliveryAddress = "Outside address",
+            DeliveryDate = endDate.AddDays(1).ToDateTime(TimeOnly.MinValue),
+            Status = setup.Statuses["Draft"],
+            Tax = setup.Tax,
+            Total = 500m
+        };
+        database.Context.SalesOrderHeaders.AddRange(startOrder, endOrder, thirdStatusOrder, outsideOrder);
+        await database.Context.SaveChangesAsync();
+        var controller = CreateSalesReportsController(database.Context);
+
+        var allStatusesResult = Assert.IsType<ViewResult>(await controller.Index(
+            startDate, endDate, null, CancellationToken.None));
+        var allStatuses = Assert.IsType<SalesReportViewModel>(allStatusesResult.Model);
+        Assert.Equal(
+            new[] { "2026-00010", "2026-00013", "2026-00011" },
+            allStatuses.Orders.Select(order => order.OrderNumber));
+        Assert.Equal(490m, allStatuses.PeriodTotal);
+        Assert.Equal("Sample Customer", allStatuses.Orders[0].CustomerName);
+        Assert.Equal(startDate.ToDateTime(TimeOnly.MinValue), allStatuses.Orders[0].DeliveryDate);
+        Assert.Equal(new[] { "Draft", "Delivered", "Approved" },
+            allStatuses.Orders.Select(order => order.StatusName));
+        Assert.Equal(
+            new[] { ("Approved", 1, 275m), ("Delivered", 1, 90m), ("Draft", 1, 125m) },
+            allStatuses.StatusSummary.Select(summary => (summary.StatusName, summary.OrderCount, summary.Total)));
+
+        var selectedStatusesResult = Assert.IsType<ViewResult>(await controller.Index(
+            startDate, endDate, [setup.Statuses["Draft"].Id, setup.Statuses["Approved"].Id], CancellationToken.None));
+        var selectedStatuses = Assert.IsType<SalesReportViewModel>(selectedStatusesResult.Model);
+        Assert.Equal(new[] { "2026-00010", "2026-00011" }, selectedStatuses.Orders.Select(order => order.OrderNumber));
+        Assert.Equal(400m, selectedStatuses.PeriodTotal);
+        Assert.Equal(2, selectedStatuses.StatusSummary.Count);
+        Assert.Equal(400m, selectedStatuses.StatusSummary.Sum(summary => summary.Total));
+
+        var singleStatusResult = Assert.IsType<ViewResult>(await controller.Index(
+            startDate, endDate, [setup.Statuses["Draft"].Id], CancellationToken.None));
+        var singleStatus = Assert.IsType<SalesReportViewModel>(singleStatusResult.Model);
+        Assert.Equal(new[] { "2026-00010" }, singleStatus.Orders.Select(order => order.OrderNumber));
+        Assert.Equal(125m, singleStatus.PeriodTotal);
+    }
+
+    [Fact]
+    public async Task Sales_report_defaults_to_today_and_rejects_incomplete_or_reversed_ranges()
+    {
+        using var database = await CreateDatabaseAsync();
+        var setup = await SeedSalesOrderLookupsAsync(database.Context);
+        database.Context.SalesOrderHeaders.Add(new SalesOrderHeader
+        {
+            OrderNumber = "2026-00020",
+            Customer = setup.Customer,
+            DeliveryAddress = "Today address",
+            DeliveryDate = DateTime.Today,
+            Status = setup.Statuses["Draft"],
+            Tax = setup.Tax,
+            Total = 50m
+        });
+        await database.Context.SaveChangesAsync();
+        var controller = CreateSalesReportsController(database.Context);
+
+        var todayResult = Assert.IsType<ViewResult>(await controller.Index(null, null, null, CancellationToken.None));
+        var todayModel = Assert.IsType<SalesReportViewModel>(todayResult.Model);
+        Assert.Equal(DateOnly.FromDateTime(DateTime.Today), todayModel.StartDate);
+        Assert.Equal(new[] { "2026-00020" }, todayModel.Orders.Select(order => order.OrderNumber));
+
+        var incompleteResult = Assert.IsType<ViewResult>(await controller.Index(
+            DateOnly.FromDateTime(DateTime.Today), null, null, CancellationToken.None));
+        Assert.Empty(Assert.IsType<SalesReportViewModel>(incompleteResult.Model).Orders);
+        Assert.False(controller.ModelState.IsValid);
+        controller.ModelState.Clear();
+
+        var reversedResult = Assert.IsType<ViewResult>(await controller.Index(
+            DateOnly.FromDateTime(DateTime.Today), DateOnly.FromDateTime(DateTime.Today).AddDays(-1),
+            null, CancellationToken.None));
+        Assert.Empty(Assert.IsType<SalesReportViewModel>(reversedResult.Model).Orders);
+        Assert.False(controller.ModelState.IsValid);
+    }
+
+    [Fact]
     public async Task Approve_from_index_redirects_back_to_index()
     {
         using var database = await CreateDatabaseAsync();
@@ -483,6 +601,7 @@ public sealed class SalesOrderTests
 
         var codes = await database.Context.Actions.Select(action => action.Code).ToListAsync();
         Assert.Contains(AuthorizationActionCodes.ViewSalesOrder, codes);
+        Assert.Contains(AuthorizationActionCodes.ViewSalesReport, codes);
         Assert.Contains(AuthorizationActionCodes.ApproveSalesOrder, codes);
         Assert.Contains(AuthorizationActionCodes.EditDeliveredSalesOrder, codes);
     }
@@ -569,6 +688,21 @@ public sealed class SalesOrderTests
             Url = new StubUrlHelper(),
             ControllerContext = new ControllerContext { HttpContext = httpContext },
             TempData = new TempDataDictionary(httpContext, new TestTempDataProvider())
+        };
+    }
+
+    private static SalesReportsController CreateSalesReportsController(AppDbContext context)
+    {
+        var services = new ServiceCollection()
+            .AddLogging()
+            .AddControllersWithViews()
+            .Services
+            .BuildServiceProvider();
+        var httpContext = new DefaultHttpContext { RequestServices = services };
+        return new SalesReportsController(context)
+        {
+            ObjectValidator = services.GetRequiredService<IObjectModelValidator>(),
+            ControllerContext = new ControllerContext { HttpContext = httpContext }
         };
     }
 
