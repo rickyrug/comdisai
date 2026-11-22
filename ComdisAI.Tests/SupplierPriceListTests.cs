@@ -98,7 +98,35 @@ public sealed class SupplierPriceListTests
             CancellationToken.None);
         Assert.Equal(7m, (await context.SupplierPriceLists.AsNoTracking().SingleAsync()).Price);
 
+        var secondProduct = new Product
+        {
+            Name = "Another item",
+            Code = "2",
+            UomId = product.UomId,
+            ProductCategoryId = product.ProductCategoryId
+        };
+        context.Products.Add(secondProduct);
+        await context.SaveChangesAsync();
+
+        controller.ModelState.Clear();
+        var reassignmentResult = Assert.IsType<RedirectToActionResult>(await controller.Edit(
+            item.Id,
+            new SupplierPriceListInputViewModel { ProductId = secondProduct.Id, Price = 33m },
+            CancellationToken.None));
+        Assert.Equal(nameof(SupplierPriceListController.Index), reassignmentResult.ActionName);
+        var reassignedItem = await context.SupplierPriceLists.AsNoTracking().SingleAsync();
+        Assert.Equal(secondProduct.Id, reassignedItem.ProductId);
+        Assert.Equal(33m, reassignedItem.Price);
+        var reassignmentHistory = await context.SupplierPriceHistories.AsNoTracking()
+            .OrderBy(history => history.Id)
+            .ToListAsync();
+        Assert.Equal(3, reassignmentHistory.Count);
+        Assert.Equal(secondProduct.Id, reassignmentHistory[2].ProductId);
+        Assert.Null(reassignmentHistory[2].PreviousPrice);
+
+        controller.ModelState.Clear();
         await controller.Delete(item.Id, CancellationToken.None);
         Assert.Empty(await context.SupplierPriceLists.ToListAsync());
+        Assert.Equal(3, await context.SupplierPriceHistories.CountAsync());
     }
 }

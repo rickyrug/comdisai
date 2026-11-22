@@ -126,7 +126,6 @@ public class SupplierPriceListController(IUnitOfWork unitOfWork) : Controller
             return NotFound();
 
         input.Id = id;
-        input.ProductId = item.ProductId;
         input.SupplierId = item.SupplierId;
         input.SupplierName = supplier.Name;
         await ValidateAsync(input, item, cancellationToken);
