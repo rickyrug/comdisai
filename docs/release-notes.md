@@ -1,5 +1,10 @@
 # Release Notes
 
+## Unreleased — Price List Product Reassignment
+
+### Fixed
+- Customer and supplier price-list edits now persist a newly selected product while retaining required product validation and audit history.
+
 ## Unreleased — Purchase Reports
 
 ### Added

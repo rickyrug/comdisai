@@ -82,6 +82,7 @@ public sealed class CustomerPriceListTests
             CancellationToken.None);
         Assert.IsType<ViewResult>(duplicate);
         Assert.False(controller.ModelState.IsValid);
+        context.ChangeTracker.Clear();
 
         controller.ModelState.Clear();
         await controller.Edit(
@@ -116,18 +117,26 @@ public sealed class CustomerPriceListTests
         };
         context.Products.Add(secondProduct);
         await context.SaveChangesAsync();
-        await controller.Edit(
-            item.Id,
-            new CustomerPriceListInputViewModel { ProductId = secondProduct.Id, Price = 7m },
-            CancellationToken.None);
+
+        controller.ModelState.Clear();
+        var item2 = await context.CustomerPriceLists.AsNoTracking().SingleAsync();
+        var reassignmentResult = Assert.IsType<RedirectToActionResult>(await controller.Edit(
+            item2.Id,
+            new CustomerPriceListInputViewModel { ProductId = secondProduct.Id, Price = 33m },
+            CancellationToken.None));
+        Assert.Equal(nameof(CustomerPriceListController.Index), reassignmentResult.ActionName);
+        var reassignedItem = await context.CustomerPriceLists.AsNoTracking().SingleAsync();
+        Assert.Equal(secondProduct.Id, reassignedItem.ProductId);
+        Assert.Equal(33m, reassignedItem.Price);
         var reassignmentHistory = await context.CustomerPriceHistories.AsNoTracking()
             .OrderBy(history => history.Id)
             .ToListAsync();
-        //Assert.Equal(3, reassignmentHistory.Count);
+        Assert.Equal(3, reassignmentHistory.Count);
         Assert.Equal(secondProduct.Id, reassignmentHistory[2].ProductId);
         Assert.Null(reassignmentHistory[2].PreviousPrice);
 
-        await controller.Delete(item.Id, CancellationToken.None);
+        controller.ModelState.Clear();
+        await controller.Delete(item2.Id, CancellationToken.None);
         Assert.Empty(await context.CustomerPriceLists.ToListAsync());
         Assert.Equal(3, await context.CustomerPriceHistories.CountAsync());
     }
