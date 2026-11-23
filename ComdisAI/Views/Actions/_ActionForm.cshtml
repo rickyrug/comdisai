@@ -2,7 +2,7 @@
 
 <div class="mb-3">
     <label asp-for="Code" class="form-label"></label>
-    <input asp-for="Code" class="form-control" maxlength="50" />
+    <input asp-for="Code" class="form-control" maxlength="50" readonly="@Model.IsSystem" />
     <span asp-validation-for="Code" class="text-danger"></span>
 </div>
 <div class="mb-3">

@@ -1,5 +1,6 @@
 using ComdisAI.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using SQLitePCL;
 using System.Security.Claims;
 
@@ -381,6 +382,9 @@ public class AppDbContext(
                 .HasMaxLength(50);
             entity.Property(action => action.Description)
                 .HasMaxLength(255);
+            entity.Property(action => action.IsSystem)
+                .HasDefaultValue(false)
+                .IsRequired();
             entity.Property<string>("NormalizedCode")
                 .HasMaxLength(50)
                 .IsRequired();
@@ -490,6 +494,8 @@ public class AppDbContext(
 
         foreach (var entry in ChangeTracker.Entries<AuditableEntity>())
         {
+            ValidateSystemAction(entry);
+
             if (entry.State == EntityState.Added)
             {
                 entry.Entity.CreatedAtUtc = now;
@@ -641,6 +647,36 @@ public class AppDbContext(
                 entry.Property(entity => entity.CreatedAtUtc).IsModified = false;
                 entry.Property(entity => entity.CreatedBy).IsModified = false;
             }
+        }
+    }
+
+    private static void ValidateSystemAction(EntityEntry<AuditableEntity> entry)
+    {
+        if (entry.Entity is not Actions action)
+            return;
+
+        var isRequired = AuthorizationActionCodes.IsRequired(action.Code);
+        if (entry.State == EntityState.Added)
+        {
+            if (action.IsSystem != isRequired || action.IsDeleted)
+                throw new InvalidOperationException("System action classification or deletion is invalid.");
+            return;
+        }
+
+        var originalIsSystem = (bool)entry.Property("IsSystem").OriginalValue!;
+        var originalCode = (string)entry.Property("Code").OriginalValue!;
+        if ((entry.State is EntityState.Modified && originalIsSystem &&
+             (!action.IsSystem || action.Code != originalCode || action.IsDeleted)) ||
+            (entry.State == EntityState.Deleted && originalIsSystem))
+        {
+            throw new InvalidOperationException("System action codes cannot be changed or deleted.");
+        }
+
+        if (entry.State is EntityState.Modified &&
+            action.IsSystem != isRequired)
+        {
+            if (!(isRequired && action.IsSystem && !originalIsSystem))
+                throw new InvalidOperationException("System action classification does not match its code.");
         }
     }
 

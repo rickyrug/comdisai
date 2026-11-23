@@ -14,6 +14,7 @@ public class Actions : AuditableEntity
     [StringLength(255)]
     public required string Description { get; set; }
 
+    public bool IsSystem { get; set; }
     public bool IsDeleted { get; set; }
     public DateTime? DeletedAtUtc { get; set; }
     public string? DeletedBy { get; set; }

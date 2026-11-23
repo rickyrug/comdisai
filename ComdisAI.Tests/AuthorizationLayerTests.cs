@@ -64,6 +64,57 @@ public sealed class AuthorizationLayerTests
     }
 
     [Fact]
+    public async Task Custom_action_edits_change_permission_identity_and_delete_removes_it()
+    {
+        using var database = await CreateDatabaseAsync();
+        var user = NewUser();
+        var role = NewRole("CUSTOM_ROLE");
+        var action = NewAction("CUSTOM_PERMISSION");
+        database.Context.AddRange(user, role, action);
+        await database.Context.SaveChangesAsync();
+        database.Context.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = role.Id });
+        database.Context.RoleActions.Add(new RoleAction { RoleId = role.Id, ActionId = action.Id });
+        await database.Context.SaveChangesAsync();
+        var service = new ActionPermissionService(database.Context);
+        var principal = Principal(user.Id, role.Id);
+
+        Assert.True(await service.HasActionAsync(principal, "CUSTOM_PERMISSION"));
+        action.Code = "RENAMED_PERMISSION";
+        await database.Context.SaveChangesAsync();
+        Assert.False(await service.HasActionAsync(principal, "CUSTOM_PERMISSION"));
+        Assert.True(await service.HasActionAsync(principal, "RENAMED_PERMISSION"));
+
+        action.IsDeleted = true;
+        await database.Context.SaveChangesAsync();
+        Assert.False(await service.HasActionAsync(principal, "RENAMED_PERMISSION"));
+        Assert.Empty(await service.GetActiveActionCodesAsync(principal));
+    }
+
+    [Fact]
+    public async Task Seeded_system_action_cannot_be_repurposed_as_another_permission()
+    {
+        using var database = await CreateDatabaseAsync();
+        await AuthorizationSeeder.SeedAsync(
+            database.Context,
+            new PasswordHasher<User>(),
+            "admin@example.test",
+            "initial-password");
+        var user = await database.Context.Users.SingleAsync();
+        var role = await database.Context.Roles.SingleAsync();
+        var action = await database.Context.Actions.SingleAsync(
+            candidate => candidate.Code == AuthorizationActionCodes.ViewAction);
+        var service = new ActionPermissionService(database.Context);
+        var principal = Principal(user.Id, role.Id);
+
+        action.Code = "CUSTOM_PERMISSION";
+        await Assert.ThrowsAsync<InvalidOperationException>(() => database.Context.SaveChangesAsync());
+        database.Context.ChangeTracker.Clear();
+
+        Assert.True(await service.HasActionAsync(principal, AuthorizationActionCodes.ViewAction));
+        Assert.False(await service.HasActionAsync(principal, "CUSTOM_PERMISSION"));
+    }
+
+    [Fact]
     public async Task Admin_seed_is_idempotent_and_does_not_reset_an_existing_password()
     {
         using var database = await CreateDatabaseAsync();
@@ -129,7 +180,8 @@ public sealed class AuthorizationLayerTests
         new()
         {
             Code = code,
-            Description = $"{code} action"
+            Description = $"{code} action",
+            IsSystem = AuthorizationActionCodes.IsRequired(code)
         };
 
     private static async Task<TestDatabase> CreateDatabaseAsync()
