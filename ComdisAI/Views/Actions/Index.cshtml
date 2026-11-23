@@ -27,13 +27,23 @@ else
             @foreach (var action in Model)
             {
                 <tr>
-                    <td>@action.Code</td>
+                    <td>
+                        @action.Code
+                        @if (action.IsSystem)
+                        {
+                            <span class="badge text-bg-secondary">System</span>
+                        }
+                    </td>
                     <td>@action.Description</td>
                     <td class="text-end">
                         <a asp-action="Edit" asp-route-id="@action.Id" class="btn btn-sm btn-outline-primary">Edit</a>
-                        <form asp-action="Delete" asp-route-id="@action.Id" method="post" class="d-inline">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                        </form>
+                        @if (!action.IsSystem)
+                        {
+                            <form asp-action="Delete" asp-route-id="@action.Id" method="post" class="d-inline"
+                                  onsubmit="return confirm('Delete this action?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                            </form>
+                        }
                     </td>
                 </tr>
             }

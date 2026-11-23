@@ -1,5 +1,15 @@
 # Release Notes
 
+## Unreleased — Actions Authorization Hardening
+
+### Security
+- Required authorization actions are now persisted as system actions. Their codes cannot be changed and their deletion returns HTTP `409 Conflict` through both controller and data-context guards.
+- Action Edit and Delete ID lookups now honor logical-delete filters, and custom-action uniqueness races no longer leave failed entities contaminating the tracked request context.
+- The Actions UI renders system codes read-only, hides their Delete controls, and confirms custom-action deletion.
+
+### Migration
+- Apply the `SystemActionClassification` EF Core migration before startup. It adds `Action.IsSystem` and backfills all application-required authorization codes; the migration is not applied automatically.
+
 ## Unreleased — Price List Product Reassignment
 
 ### Fixed

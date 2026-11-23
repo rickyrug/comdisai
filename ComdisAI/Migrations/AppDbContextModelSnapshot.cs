@@ -49,6 +49,11 @@ namespace ComdisAI.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsSystem")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("NormalizedCode")
                         .IsRequired()
                         .HasMaxLength(50)

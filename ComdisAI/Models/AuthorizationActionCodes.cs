@@ -1,7 +1,21 @@
+using System.Collections.Frozen;
+using System.Reflection;
+
 namespace ComdisAI.Models;
 
 public static class AuthorizationActionCodes
 {
+    private static readonly FrozenSet<string> RequiredCodeSet = typeof(AuthorizationActionCodes)
+        .GetFields(BindingFlags.Public | BindingFlags.Static)
+        .Where(field => field.IsLiteral && field.FieldType == typeof(string))
+        .Select(field => (string)field.GetRawConstantValue()!)
+        .ToFrozenSet(StringComparer.Ordinal);
+
+    public static IReadOnlySet<string> RequiredCodes => RequiredCodeSet;
+
+    public static bool IsRequired(string? code) =>
+        !string.IsNullOrWhiteSpace(code) && RequiredCodeSet.Contains(code.Trim().ToUpperInvariant());
+
     public const string ViewHome = "VIEW_HOME";
     public const string ViewPrivacy = "VIEW_PRIVACY";
     public const string ViewCustomer = "VIEW_CUSTOMER";

@@ -99,6 +99,8 @@ public static class AuthorizationSeeder
         (AuthorizationActionCodes.AllocateSupplierPayment, "Allocate supplier payments to purchase orders")
     ];
 
+    public static IReadOnlyList<(string Code, string Description)> RequiredActions => SeedActions;
+
     public static async Task SeedAsync(
         AppDbContext dbContext,
         IPasswordHasher<User> passwordHasher,
@@ -158,10 +160,11 @@ public static class AuthorizationSeeder
                         $"The required authorization action '{code}' exists but is logically deleted.");
                 }
 
+                existingAction.IsSystem = true;
                 continue;
             }
 
-            var action = new Actions { Code = code, Description = description };
+            var action = new Actions { Code = code, Description = description, IsSystem = true };
             await dbContext.Actions.AddAsync(action, cancellationToken);
             actionsByCode.Add(normalizedCode, action);
         }
