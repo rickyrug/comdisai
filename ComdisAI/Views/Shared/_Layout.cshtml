@@ -178,7 +178,13 @@
                                                 @if (canViewLogs)
                                                 {
                                                     <li>
-                                                        <a class="dropdown-item" asp-controller="Logs" asp-action="Index">Application Logs</a>
+                                                        <a class="dropdown-item" asp-controller="Admin" asp-action="Usability">Application Usability</a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item" asp-controller="Admin" asp-action="AppLogs">Application Logs</a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item" asp-controller="Logs" asp-action="Index">Historical Logs</a>
                                                     </li>
                                                 }
                                             </ul>

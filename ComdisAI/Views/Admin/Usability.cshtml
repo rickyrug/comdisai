@@ -1,0 +1,44 @@
+@model ComdisAI.ViewModels.Logs.UsabilityDashboard
+@{
+    ViewData["Title"] = "Application Usability";
+    ViewData["FullWidth"] = true;
+    var route = new Dictionary<string, string?> {
+        ["From"] = Model.From?.UtcDateTime.ToString("yyyy-MM-ddTHH:mm"), ["To"] = Model.To?.UtcDateTime.ToString("yyyy-MM-ddTHH:mm"),
+        ["User"] = Model.User, ["Module"] = Model.Module, ["Source"] = Model.Source,
+        ["IncludeLookups"] = Model.IncludeLookups.ToString(), ["PageSize"] = Model.PageSize.ToString()
+    };
+    var topView = Model.Views.FirstOrDefault();
+}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h3 mb-0">Application Usability</h1>
+    <a class="btn btn-outline-secondary" asp-action="AppLogs">Application Logs</a>
+</div>
+<form asp-action="Usability" method="get" class="row g-2 align-items-end mb-4">
+    <div class="col-sm-6 col-lg-2"><label class="form-label" for="from">From (UTC)</label><input class="form-control" id="from" name="From" type="datetime-local" value="@route["From"]" /></div>
+    <div class="col-sm-6 col-lg-2"><label class="form-label" for="to">To (UTC)</label><input class="form-control" id="to" name="To" type="datetime-local" value="@route["To"]" /></div>
+    <div class="col-sm-6 col-lg-2"><label class="form-label" for="user">Logged User</label><input class="form-control" id="user" name="User" value="@Model.User" /></div>
+    <div class="col-sm-6 col-lg-2"><label class="form-label" for="module">Module</label><input class="form-control" id="module" name="Module" value="@Model.Module" /></div>
+    <div class="col-sm-6 col-lg-2"><label class="form-label" for="source">Source</label><select class="form-select" id="source" name="Source"><option value="All">All</option><option value="Page" selected="@(Model.Source == "Page")">Page</option><option value="Api" selected="@(Model.Source == "Api")">API</option></select></div>
+    <div class="col-sm-6 col-lg-2"><div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="includeLookups" name="IncludeLookups" value="true" checked="@Model.IncludeLookups" /><label class="form-check-label" for="includeLookups">Include option lookups</label></div></div>
+    <div class="col-12 d-flex gap-2"><button class="btn btn-primary" type="submit">Apply</button><a class="btn btn-outline-secondary" asp-action="Usability">Reset</a></div>
+</form>
+<div class="row row-cols-2 row-cols-lg-5 g-3 mb-4">
+    <div class="col"><div class="border rounded p-3 h-100"><div class="text-muted small">Most Used View</div><strong>@(topView?.View ?? "-")</strong><div>@(topView?.Hits ?? 0) hits</div></div></div>
+    <div class="col"><div class="border rounded p-3 h-100"><div class="text-muted small">Top Module</div><strong>@(Model.TopModule ?? "-")</strong></div></div>
+    <div class="col"><div class="border rounded p-3 h-100"><div class="text-muted small">Total Events</div><strong>@Model.TotalEvents</strong></div></div>
+    <div class="col"><div class="border rounded p-3 h-100"><div class="text-muted small">Active Users</div><strong>@Model.ActiveUsers</strong></div></div>
+    <div class="col"><div class="border rounded p-3 h-100"><div class="text-muted small">Average Response</div><strong>@Model.AverageResponseMs.ToString("0.0") ms</strong></div></div>
+</div>
+<h2 class="h5">Most Used Views</h2>
+<div class="table-responsive mb-4"><table class="table table-striped table-sm"><thead><tr><th>Module</th><th>View</th><th>Sub-View</th><th>Hits</th><th>Unique Users</th><th>Share</th><th>Avg ms</th><th>Last Used (UTC)</th></tr></thead><tbody>
+@foreach (var item in Model.Views) { <tr><td>@item.Module</td><td>@item.View</td><td>@item.SubView</td><td>@item.Hits</td><td>@item.UniqueUsers</td><td>@item.Share.ToString("0.0")%</td><td>@item.AverageMs.ToString("0.0")</td><td class="text-nowrap">@item.LastUsed.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss")</td></tr> }
+</tbody></table></div>
+<h2 class="h5">Activity by Logged User</h2>
+<div class="table-responsive mb-4"><table class="table table-striped table-sm"><thead><tr><th>User</th><th>Events</th><th>Distinct Views</th><th>Most Used View</th><th>Last Activity (UTC)</th></tr></thead><tbody>
+@foreach (var item in Model.Users) { var userRoute = new Dictionary<string, string?>(route) { ["User"] = item.UserId }; <tr><td><a asp-action="Usability" asp-all-route-data="userRoute">@item.UserName (@item.UserId)</a></td><td>@item.Events</td><td>@item.DistinctViews</td><td>@item.MostUsedView</td><td class="text-nowrap">@item.LastActivity.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss")</td></tr> }
+</tbody></table></div>
+<h2 class="h5">Event Log by Date &amp; Time</h2>
+<div class="table-responsive"><table class="table table-striped table-sm"><thead><tr><th>Time (UTC)</th><th>User</th><th>Source</th><th>Kind</th><th>Module</th><th>View</th><th>Sub-View</th><th>Route</th><th>Status</th><th>ms</th></tr></thead><tbody>
+@foreach (var item in Model.Events) { <tr><td class="text-nowrap">@item.TimestampUtc.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss")</td><td>@item.UserName</td><td>@item.EventSource</td><td>@item.EventKind</td><td>@item.Module</td><td>@item.ViewName</td><td>@item.SubView</td><td>@item.Route</td><td>@item.StatusCode</td><td>@item.DurationMs.ToString("0.0")</td></tr> }
+</tbody></table></div>
+@if (Model.TotalPages > 1) { <nav aria-label="Event pages" class="d-flex align-items-center gap-3">@if (Model.Page > 1) { var previous = new Dictionary<string, string?>(route) { ["Page"] = (Model.Page - 1).ToString() }; <a asp-action="Usability" asp-all-route-data="previous">Previous</a> }<span>Page @Model.Page of @Model.TotalPages</span>@if (Model.Page < Model.TotalPages) { var next = new Dictionary<string, string?>(route) { ["Page"] = (Model.Page + 1).ToString() }; <a asp-action="Usability" asp-all-route-data="next">Next</a> }</nav> }
