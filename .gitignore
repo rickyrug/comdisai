@@ -53,6 +53,8 @@ TestResults/
 *.log
 *.sqlite
 ComdisAI/logs/
+Logs/
+logs/
 # OS generated files #
 ######################
 .DS_Store?

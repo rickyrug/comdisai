@@ -9,6 +9,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using Serilog;
+using Serilog.Filters;
+using Serilog.Formatting.Compact;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,30 +23,59 @@ if (retentionDays < 1)
     throw new InvalidOperationException("Serilog:File:RetentionDays must be greater than zero.");
 Directory.CreateDirectory(logDirectory);
 
+builder.Services.AddOptions<UsabilityLoggingOptions>()
+    .Bind(builder.Configuration.GetSection(UsabilityLoggingOptions.SectionName))
+    .Validate(options => !string.IsNullOrWhiteSpace(options.LogsDirectory) && options.RetainedFileCountLimit > 0)
+    .ValidateOnStart();
+
 builder.Host.UseSerilog((context, services, loggerConfiguration) =>
 {
+    var options = services.GetRequiredService<IOptions<UsabilityLoggingOptions>>().Value;
+    var directory = options.ResolveDirectory(context.HostingEnvironment.ContentRootPath);
+    Directory.CreateDirectory(directory);
     loggerConfiguration
         .ReadFrom.Configuration(context.Configuration)
         .ReadFrom.Services(services)
         .Enrich.FromLogContext()
         .Enrich.WithProperty("Application", "ComdisAI")
-        .WriteTo.File(
-            new Serilog.Formatting.Json.JsonFormatter(renderMessage: true),
-            Path.Combine(logDirectory, "log-.json"),
-            rollingInterval: RollingInterval.Day,
-            retainedFileTimeLimit: TimeSpan.FromDays(retentionDays),
-            retainedFileCountLimit: 1000,
-            shared: true);
-});
+        .WriteTo.Console()
+        .WriteTo.Logger(application => application
+            .Filter.ByExcluding(Matching.WithProperty<bool>("IsUsabilityEvent", value => value))
+            .WriteTo.File(Path.Combine(directory, "app-.log"), rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: options.RetainedFileCountLimit, shared: true)
+            .WriteTo.File(new RenderedCompactJsonFormatter(), Path.Combine(directory, "app-.json"),
+                rollingInterval: RollingInterval.Day, retainedFileCountLimit: options.RetainedFileCountLimit, shared: true));
+
+    if (options.Enabled)
+        loggerConfiguration.WriteTo.Logger(usability => usability
+            .Filter.ByIncludingOnly(Matching.WithProperty<bool>("IsUsabilityEvent", value => value))
+            .WriteTo.File(new CompactJsonFormatter(), Path.Combine(directory, "usability-.json"),
+                rollingInterval: RollingInterval.Day, retainedFileCountLimit: options.RetainedFileCountLimit, shared: true));
+}, preserveStaticLogger: true);
 
 // Add services to the container.
 builder.Services.AddScoped<GlobalActionLoggingFilter>();
+builder.Services.AddScoped<UsabilityTrackingActionFilter>();
+builder.Services.AddSingleton<IUsabilityEventLogger, UsabilityEventLogger>();
+builder.Services.AddSingleton<IUsabilityAnalyticsService, FileUsabilityAnalyticsService>();
+builder.Services.AddSingleton<IAppLogService, FileAppLogService>();
 builder.Services.AddControllersWithViews(options =>
-    options.Filters.AddService<GlobalActionLoggingFilter>());
+{
+    options.Filters.AddService<GlobalActionLoggingFilter>();
+    options.Filters.AddService<UsabilityTrackingActionFilter>();
+});
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
         options.LoginPath = "/Authentication/Login";
+        options.Events.OnRedirectToLogin = context =>
+        {
+            if (context.Request.Path.StartsWithSegments("/Admin/Usability") || context.Request.Path.StartsWithSegments("/Admin/AppLogs"))
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            else
+                context.Response.Redirect(context.RedirectUri);
+            return Task.CompletedTask;
+        };
     });
 builder.Services.AddAuthorization(options =>
 {
@@ -115,6 +147,8 @@ app.UseSerilogRequestLogging(options =>
         diagnosticContext.Set(
             "ActiveRoleId",
             principal.FindFirstValue(AuthorizationClaims.ActiveRoleId) ?? "none");
+        diagnosticContext.Set("UserName", principal.Identity?.Name ?? "ANONYMOUS");
+        diagnosticContext.Set("EndpointName", httpContext.GetEndpoint()?.DisplayName ?? "unknown");
         diagnosticContext.Set(
             "Controller",
             httpContext.Request.RouteValues["controller"]?.ToString() ?? "unknown");
@@ -124,6 +158,7 @@ app.UseSerilogRequestLogging(options =>
     };
 });
 
+app.UseMiddleware<UsabilityTrackingMiddleware>();
 app.UseAuthorization();
 
 app.MapStaticAssets().AllowAnonymous();
@@ -135,3 +170,5 @@ app.MapControllerRoute(
 
 
 app.Run();
+
+public partial class Program;
